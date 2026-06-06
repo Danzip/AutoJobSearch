@@ -29,7 +29,7 @@ from src.referral_search import find_referral_targets, write_referral_targets_md
 from src.scorer import score_requirements
 from src.scrapers.base import ScraperError, scrape_url
 from src.token_tracker import print_summary as print_token_summary
-from src.utils import load_profile, load_profile_notes, save_profile_notes
+from src.utils import load_config, load_profile, load_profile_notes, save_profile_notes
 
 
 def slugify(text: str, max_len: int = 35) -> str:
@@ -81,6 +81,9 @@ def run_batch(
 
     # ── 2. Scrape ──────────────────────────────────────────────────────────────
     _step(2, 4, "Fetching job descriptions")
+    from src.scrapers.date_utils import is_stale
+    from src.scrapers.base import ScrapedJob
+    max_age = load_config().get("search", {}).get("max_job_age_days", 180)
     scraped = []
 
     # Workday direct results already have descriptions — add them immediately
@@ -89,7 +92,10 @@ def run_batch(
         if wd["url"] in seen_urls:
             continue
         seen_urls.add(wd["url"])
-        from src.scrapers.base import ScrapedJob
+        posted = wd.get("posted_date", "")
+        if is_stale(posted, max_age):
+            print(f"  SKIP  (stale {posted})  {wd['title'][:55]}")
+            continue
         scraped.append({
             "url": wd["url"],
             "board": wd["board"],
@@ -98,6 +104,7 @@ def run_batch(
                 company=wd["company"],
                 description=wd["description"],
                 source="workday_api",
+                posted_date=posted,
             ),
         })
         print(f"  OK    {wd['title'][:55]}  [{wd['company']}]")
@@ -110,6 +117,9 @@ def run_batch(
             job = scrape_url(r["url"])
             if len(job.description.strip()) < 80:
                 print(f"  SKIP  (too short)  {r['url'][:70]}")
+                continue
+            if is_stale(job.posted_date, max_age):
+                print(f"  SKIP  (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
                 continue
             scraped.append({
                 "url": r["url"],
@@ -158,6 +168,7 @@ def run_batch(
                 "score":       score,
                 "explanation": explanation,
                 "angle":       angle,
+                "posted_date": s.posted_date or "",
             })
             bar = "█" * int(score // 10) + "░" * (10 - int(score // 10))
             print(f"  {bar}  {score:5.0f}/100  {company[:22]:<22} {title[:40]}")
@@ -378,7 +389,7 @@ def _write_overall_summary(out_dir, keywords, boards, n_found, all_scored, top):
         for i, j in enumerate(top)
     )
     all_rows = "\n".join(
-        f"| {j['score']:.0f} | {j['company'][:25]} | {j['title'][:38]} | {j['location'] or '—'} |"
+        f"| {j['score']:.0f} | {j['company'][:25]} | {j['title'][:38]} | {j.get('posted_date') or '—'} | {j['location'] or '—'} |"
         for j in all_scored
     )
     avg_all = sum(j["score"] for j in all_scored) / len(all_scored)
@@ -411,8 +422,8 @@ def _write_overall_summary(out_dir, keywords, boards, n_found, all_scored, top):
 
 ## All Analyzed Jobs
 
-| Score | Company | Title | Location |
-|---|---|---|---|
+| Score | Company | Title | Posted | Location |
+|---|---|---|---|---|
 {all_rows}
 """)
     print(f"\n  SUMMARY.md written to {out_dir}/")

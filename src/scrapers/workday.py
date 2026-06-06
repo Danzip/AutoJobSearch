@@ -55,11 +55,13 @@ class WorkdayScraper(BaseScraper):
                     info = data.get("jobPostingInfo", {})
                     org = data.get("hiringOrganization", {})
                     desc_html = info.get("jobDescription", "")
+                    from src.scrapers.date_utils import parse_relative_date
                     return ScrapedJob(
                         title=info.get("title", ""),
                         company=org.get("name", ""),
                         location=info.get("locationsText", ""),
                         description=_html_to_text(desc_html),
+                        posted_date=parse_relative_date(info.get("postedOn", "")),
                     )
             except Exception:
                 pass  # fall through to generic

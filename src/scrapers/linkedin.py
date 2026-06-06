@@ -5,6 +5,8 @@ LinkedIn sends a redirect to the login page for some roles - we fall back to
 whatever text we can extract, and show a notice if the content is too short.
 """
 
+import re
+
 from src.scrapers.base import BaseScraper, ScrapedJob
 from src.scrapers.generic import fetch_html, extract_text
 
@@ -59,12 +61,19 @@ class LinkedInScraper(BaseScraper):
                 + description
             )
 
+        from src.scrapers.date_utils import parse_relative_date
+        posted_date = ""
+        date_el = soup.find(string=re.compile(r"\d+\s*(hour|day|week|month|year)s?\s*ago", re.I))
+        if date_el:
+            posted_date = parse_relative_date(str(date_el))
+
         return ScrapedJob(
             title=title,
             company=company,
             location=location,
             description=description,
             source="linkedin",
+            posted_date=posted_date,
         )
 
 

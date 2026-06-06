@@ -15,6 +15,7 @@ class ScrapedJob:
     location: str = ""
     description: str = ""
     source: str = "generic"
+    posted_date: str = ""   # ISO date string YYYY-MM-DD, empty if unknown
 
 
 class BaseScraper(ABC):
@@ -29,7 +30,7 @@ def detect_source(url: str) -> str:
         return "workable"
     if re.search(r"myworkdayjobs\.com|workday\.com", url):
         return "workday"
-if re.search(r"linkedin\.com", url):
+    if re.search(r"linkedin\.com", url):
         return "linkedin"
     return "generic"
 

@@ -85,12 +85,14 @@ def _search_company(company: dict, keywords: str, max_results: int) -> list[dict
             desc = _html_to_text(info.get("jobDescription", ""))
             if len(desc) < _MIN_DESC_CHARS:
                 continue
+            from src.scrapers.date_utils import parse_relative_date
             results.append({
                 "board": "Workday",
                 "title": info.get("title") or job.get("title", ""),
                 "company": company["name"],
                 "url": _public_url(company, path),
                 "description": desc,
+                "posted_date": parse_relative_date(job.get("postedOn", "")),
             })
         except Exception:
             continue

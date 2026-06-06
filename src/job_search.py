@@ -1,10 +1,11 @@
 from typing import Optional
 
 SEARCH_TEMPLATES: dict[str, str] = {
-    "Workday":    "site:myworkdayjobs.com {keywords}",
-    "Workable":   'site:apply.workable.com "{keywords}" "Israel"',
-    "Greenhouse": 'site:job-boards.greenhouse.io "Tel Aviv" "{keywords}"',
-    "LinkedIn":   'site:il.linkedin.com/jobs/view "{keywords}" "Israel"',
+    "Workday":        "site:myworkdayjobs.com {keywords}",
+    "Workable":       'site:apply.workable.com "{keywords}" "Israel"',
+    "Greenhouse":     'site:job-boards.greenhouse.io "Tel Aviv" "{keywords}"',
+    "LinkedIn_jobs":  'site:linkedin.com/jobs/view "{keywords}" "tel aviv"',
+    "LinkedIn_posts": 'site:linkedin.com/posts "{keywords}" "hiring" "israel"',
 }
 
 ALL_BOARDS = list(SEARCH_TEMPLATES.keys())

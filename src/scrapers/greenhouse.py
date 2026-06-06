@@ -37,15 +37,18 @@ class GreenhouseScraper(BaseScraper):
         except requests.RequestException as e:
             raise ScraperError(f"Greenhouse API error: {e}") from e
 
+        from src.scrapers.date_utils import parse_relative_date
         title = data.get("title", "")
         location = data.get("location", {}).get("name", "")
         company = board.replace("-", " ").title()
         raw_html = data.get("content", "")
         description = BeautifulSoup(raw_html, "lxml").get_text(separator="\n").strip()
+        posted_date = parse_relative_date(data.get("updated_at", ""))
 
         return ScrapedJob(
             title=title,
             company=company,
             location=location,
             description=description,
+            posted_date=posted_date,
         )
