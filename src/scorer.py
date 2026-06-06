@@ -1,8 +1,7 @@
 from src.models import CV_ANGLES
 from src.utils import load_config
 
-# Degree gap penalty (candidate holds a BSc; roles requiring higher degrees are penalized)
-_DEGREE_PENALTIES = {"phd": -20.0, "ph.d": -20.0, "msc": -10.0, "ms": -10.0, "masters": -10.0}
+_DEGREE_LEVEL = {"bsc": 1, "bs": 1, "msc": 2, "ms": 2, "masters": 2, "phd": 3, "ph.d": 3}
 
 _MANAGEMENT_SIGNALS = (
     "team lead", "team leader", "tech lead", "engineering manager",
@@ -21,9 +20,14 @@ def _scoring_cfg() -> dict:
     return load_config().get("scoring", {})
 
 
-def degree_penalty(requirements: dict) -> float:
-    degree = requirements.get("degree_required", "none").lower().strip()
-    return _DEGREE_PENALTIES.get(degree, 0.0)
+def degree_penalty(requirements: dict, candidate_degree: str = "bsc") -> float:
+    required = requirements.get("degree_required", "none").lower().strip()
+    candidate_level = _DEGREE_LEVEL.get(candidate_degree.lower(), 1)
+    required_level = _DEGREE_LEVEL.get(required, 0)
+    if required_level <= candidate_level:
+        return 0.0
+    gap = required_level - candidate_level
+    return -10.0 * gap
 
 
 def is_management_role(title: str, seniority: str) -> bool:
@@ -70,8 +74,9 @@ def score_requirements(requirements: dict) -> tuple[float, str, str]:
         float(requirements.get(k, 0)) == 0 for k in primary_keys
     )
 
+    candidate_degree = cfg.get("candidate_degree", "bsc")
     mgmt_penalty = is_management_role(title, seniority)
-    deg_penalty  = degree_penalty(requirements)
+    deg_penalty  = degree_penalty(requirements, candidate_degree)
 
     if domain_penalty:
         total -= 20.0
@@ -90,6 +95,7 @@ def score_requirements(requirements: dict) -> tuple[float, str, str]:
         management_penalty=mgmt_penalty,
         deg_penalty=deg_penalty,
         degree_required=requirements.get("degree_required", "none"),
+        candidate_degree=candidate_degree,
     )
     return score, explanation, angle
 
@@ -123,6 +129,7 @@ def _build_explanation(
     management_penalty: bool = False,
     deg_penalty: float = 0.0,
     degree_required: str = "none",
+    candidate_degree: str = "bsc",
 ) -> str:
     lines = [f"Score: {score:.0f}/100"]
 
@@ -147,7 +154,7 @@ def _build_explanation(
         lines.append("PENALTY: People management / team lead role (-25pts) - no management experience")
     if deg_penalty < 0:
         lines.append(
-            f"PENALTY: {degree_required.upper()} required, candidate has BSc ({deg_penalty:.0f}pts)"
+            f"PENALTY: {degree_required.upper()} required, candidate has {candidate_degree.upper()} ({deg_penalty:.0f}pts)"
         )
 
     return "\n".join(lines)

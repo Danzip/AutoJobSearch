@@ -100,6 +100,12 @@ Search → Scrape → Analyze → Score → Generate → Review
 | **Application Tracker** | All jobs grouped by status (interesting → applied → interview → offer) |
 | **Settings / Profile** | API key status, config, token usage, profile notes editor |
 
+### Adding a single job
+
+**Via the UI (saves to database):** Open the app, go to Add Job, paste the URL or description. The job is scraped, saved to SQLite, and appears in your inbox immediately. Click Analyze → Generate to score it and produce a CV.
+
+**Via Claude Code terminal (paste URL here):** Paste a job URL directly in this terminal. Claude Code will scrape it, analyze it, score it, and show you the result. It does **not** auto-save to the database — say "save it" and Claude Code will insert it into SQLite so it appears in the UI too. This is the fastest path for one-off jobs you find on LinkedIn or a company careers page.
+
 ---
 
 ## Batch Pipeline
@@ -248,6 +254,11 @@ Each `summary.md` in the output batch ends with clarifying questions. When you a
 1. Paste your answers into the `**Your answers:**` section of the summary file
 2. Tell Claude Code "update profile from my answers in [batch directory]"
 3. Claude Code will update `profile/candidate_profile.yaml` - either expanding an existing story's `body` or adding a new story
+4. Claude Code runs config sync so scoring dimensions stay aligned with your updated profile:
+   ```bash
+   python -c "from src.config_updater import sync_scoring_config; sync_scoring_config()"
+   ```
+   This step is also automatic at the start of every `batch_search.py` run.
 
 The original reference doc in `input/` is **never modified** - it is the read-only source.
 

@@ -83,10 +83,30 @@ Each `summary.md` ends with clarifying questions the LLM generated. When the use
 1. Read the user's answers
 2. Update `profile/candidate_profile.yaml` - either add a new story entry under `stories:` or append to an existing story's `body`
 3. If the answer reveals a genuinely new capability or framing, add it as a new story with appropriate tags
-4. Confirm to the user what was updated
+4. **After updating the profile**, run the config sync so scoring dimensions stay aligned:
+   ```bash
+   python -c "from src.config_updater import sync_scoring_config; sync_scoring_config()"
+   ```
+5. Confirm to the user what was updated
 
 **Never** modify the original reference doc in `input/` - it is read-only.  
 The editable profile is `profile/candidate_profile.yaml`.
+
+## Scoring Config Auto-Sync
+
+`config.yaml`'s `scoring` section (dimensions, excluded_domains, primary_keys, candidate_degree) is
+auto-generated from `profile/candidate_profile.yaml` by the LLM. It runs automatically at the
+start of `batch_search.py`. You can also trigger it manually:
+
+```bash
+python -c "from src.config_updater import sync_scoring_config; sync_scoring_config()"
+```
+
+This means:
+- A PhD candidate gets no degree penalty (candidate_degree=phd)
+- A biomedical engineer gets biomedical-specific scoring dimensions instead of CV/edge-AI ones
+- Excluded domains derive from the profile's `hard_limits` and story content
+- Skip the sync with `--skip-config-sync` flag if you want to lock the current config
 
 ## Token Cost Mitigation
 
@@ -136,10 +156,9 @@ These apply to ALL generated content (CVs, messages, emails, talking points):
 
 ## Scoring Weights (sum to 100 at max)
 
-- CV + DL relevance: 30 pts
-- Real-time + Edge AI: 20 pts
-- Tracking/detection/seg: 15 pts
-- Seniority match: 15 pts
-- Production deployment: 10 pts
-- Geometry / robotics: 10 pts
-- Penalties: up to -30 pts (non-CV domains, zero CV signal)
+Dimensions are defined in `config.yaml` under `scoring.dimensions` and auto-synced from the
+candidate profile. Seniority always contributes up to 15 pts; all other dimensions sum to 85 max.
+Penalties (domain mismatch, zero-signal, management, degree gap) can reduce score by up to -55 pts.
+
+**Never modify scoring weights without updating tests.** The math in `src/scorer.py` assumes
+`max_pts` across all dimensions sums to 85.

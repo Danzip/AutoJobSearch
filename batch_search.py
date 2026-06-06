@@ -44,8 +44,14 @@ def run_batch(
     boards: list = None,
     max_per_board: int = 10,
     top_n: int = 10,
+    skip_config_sync: bool = False,
 ) -> Path:
     db.init_db()
+
+    if not skip_config_sync:
+        from src.config_updater import sync_scoring_config
+        sync_scoring_config(llm=get_analyze_llm())
+
     profile = load_profile()
     analyze_llm  = get_analyze_llm()   # Haiku — cheap extraction
     generate_llm = get_generate_llm()  # Sonnet — quality writing
@@ -445,6 +451,8 @@ if __name__ == "__main__":
                         help="Number of CVs to generate")
     parser.add_argument("--dry-run", action="store_true",
                         help="Search + scrape only; save to data/scraped_jobs.json for agentic mode")
+    parser.add_argument("--skip-config-sync", action="store_true",
+                        help="Skip auto-update of scoring config from candidate profile")
     args = parser.parse_args()
 
     if args.dry_run:
@@ -478,4 +486,5 @@ if __name__ == "__main__":
             boards=args.boards,
             max_per_board=args.max_per_board,
             top_n=args.top_n,
+            skip_config_sync=args.skip_config_sync,
         )
