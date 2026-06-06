@@ -47,6 +47,7 @@ def run_batch(
     max_per_board: int = 10,
     top_n: int = 10,
     skip_config_sync: bool = False,
+    from_json: Path = None,
 ) -> Path:
     db.init_db()
 
@@ -66,81 +67,99 @@ def run_batch(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     _banner("AUTOJOBAPPLY BATCH RUN")
-    print(f"Keywords : {keywords}")
-    print(f"Boards   : {', '.join(boards)}")
     print(f"Output   : {out_dir}/\n")
 
-    # ── 1. Search ──────────────────────────────────────────────────────────────
-    _step(1, 4, "Searching job boards")
-    raw = search_jobs(keywords, boards, max_results=max_per_board)
-    urls = [r for r in raw if r.get("url")]
-    print(f"  DuckDuckGo: {len(urls)} URLs found")
-
-    print("  Direct Workday company search:")
-    workday_direct = search_workday_companies(keywords, max_per_company=max_per_board)
-    print("  Direct Comeet company search:")
-    comeet_direct = search_comeet_companies(keywords)
-    print(f"  → {len(urls)} DDG + {len(workday_direct)} Workday + {len(comeet_direct)} Comeet direct\n")
-
-    # ── 2. Scrape ──────────────────────────────────────────────────────────────
-    _step(2, 4, "Fetching job descriptions")
-    from src.scrapers.date_utils import is_stale
+    # ── 1+2. Search + Scrape (or load from existing JSON) ─────────────────────
     from src.scrapers.base import ScrapedJob
-    max_age = load_config().get("search", {}).get("max_job_age_days", 180)
-    scraped = []
-
-    # Workday direct results already have descriptions — add them immediately
-    seen_urls = set()
-    for wd in workday_direct:
-        if wd["url"] in seen_urls:
-            continue
-        seen_urls.add(wd["url"])
-        posted = wd.get("posted_date", "")
-        if is_stale(posted, max_age):
-            print(f"  SKIP  (stale {posted})  {wd['title'][:55]}")
-            continue
-        scraped.append({
-            "url": wd["url"],
-            "board": wd["board"],
-            "scraped": ScrapedJob(
-                title=wd["title"],
-                company=wd["company"],
-                description=wd["description"],
-                source="workday_api",
-                posted_date=posted,
-            ),
-        })
-        print(f"  OK    {wd['title'][:55]}  [{wd['company']}]")
-
-    # Merge Comeet direct URLs into the scrape queue
-    for cd in comeet_direct:
-        if cd["url"] not in seen_urls:
-            urls.append({"url": cd["url"], "board": "Comeet",
-                         "title": cd["title"], "company": cd["company"]})
-
-    for r in urls:
-        if r["url"] in seen_urls:
-            continue
-        seen_urls.add(r["url"])
-        try:
-            job = scrape_url(r["url"])
-            if len(job.description.strip()) < 80:
-                print(f"  SKIP  (too short)  {r['url'][:70]}")
-                continue
-            if is_stale(job.posted_date, max_age):
-                print(f"  SKIP  (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
+    if from_json:
+        _banner(f"Loading from {from_json}")
+        raw_jobs = json.loads(Path(from_json).read_text())
+        scraped = []
+        for j in raw_jobs:
+            if not j.get("description", "").strip():
                 continue
             scraped.append({
-                "url": r["url"],
-                "board": r["board"],
-                "scraped": job,
+                "url":   j.get("url", ""),
+                "board": j.get("board", ""),
+                "scraped": ScrapedJob(
+                    title=j.get("title", ""),
+                    company=j.get("company", ""),
+                    description=j.get("description", ""),
+                    posted_date=j.get("posted_date", ""),
+                ),
             })
-            title = (job.title or r["title"])[:55]
-            print(f"  OK    {title}")
-        except (ScraperError, Exception) as exc:
-            print(f"  FAIL  {r['url'][:60]}  —  {exc}")
-        time.sleep(0.4)
-    print(f"\n  → {len(scraped)} jobs with real descriptions\n")
+        print(f"  Loaded {len(scraped)} jobs from {from_json}\n")
+    else:
+        print(f"Keywords : {keywords}")
+        print(f"Boards   : {', '.join(boards)}\n")
+        _step(1, 4, "Searching job boards")
+        raw = search_jobs(keywords, boards, max_results=max_per_board)
+        urls = [r for r in raw if r.get("url")]
+        print(f"  DuckDuckGo: {len(urls)} URLs found")
+
+        print("  Direct Workday company search:")
+        workday_direct = search_workday_companies(keywords, max_per_company=max_per_board)
+        print("  Direct Comeet company search:")
+        comeet_direct = search_comeet_companies(keywords)
+        print(f"  → {len(urls)} DDG + {len(workday_direct)} Workday + {len(comeet_direct)} Comeet direct\n")
+
+        _step(2, 4, "Fetching job descriptions")
+        from src.scrapers.date_utils import is_stale
+        max_age = load_config().get("search", {}).get("max_job_age_days", 180)
+        scraped = []
+
+        # Workday direct results already have descriptions — add them immediately
+        seen_urls = set()
+        for wd in workday_direct:
+            if wd["url"] in seen_urls:
+                continue
+            seen_urls.add(wd["url"])
+            posted = wd.get("posted_date", "")
+            if is_stale(posted, max_age):
+                print(f"  SKIP  (stale {posted})  {wd['title'][:55]}")
+                continue
+            scraped.append({
+                "url": wd["url"],
+                "board": wd["board"],
+                "scraped": ScrapedJob(
+                    title=wd["title"],
+                    company=wd["company"],
+                    description=wd["description"],
+                    source="workday_api",
+                    posted_date=posted,
+                ),
+            })
+            print(f"  OK    {wd['title'][:55]}  [{wd['company']}]")
+
+        # Merge Comeet direct URLs into the scrape queue
+        for cd in comeet_direct:
+            if cd["url"] not in seen_urls:
+                urls.append({"url": cd["url"], "board": "Comeet",
+                             "title": cd["title"], "company": cd["company"]})
+
+        for r in urls:
+            if r["url"] in seen_urls:
+                continue
+            seen_urls.add(r["url"])
+            try:
+                job = scrape_url(r["url"])
+                if len(job.description.strip()) < 80:
+                    print(f"  SKIP  (too short)  {r['url'][:70]}")
+                    continue
+                if is_stale(job.posted_date, max_age):
+                    print(f"  SKIP  (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
+                    continue
+                scraped.append({
+                    "url": r["url"],
+                    "board": r["board"],
+                    "scraped": job,
+                })
+                title = (job.title or r["title"])[:55]
+                print(f"  OK    {title}")
+            except (ScraperError, Exception) as exc:
+                print(f"  FAIL  {r['url'][:60]}  —  {exc}")
+            time.sleep(0.4)
+        print(f"\n  → {len(scraped)} jobs with real descriptions\n")
 
     # ── 3. Analyze + score (Batch API — 50% discount) ────────────────────────
     _step(3, 4, f"Analyzing and scoring {len(scraped)} jobs")
@@ -512,7 +531,9 @@ if __name__ == "__main__":
     parser.add_argument("--top-n", type=int, default=10,
                         help="Number of CVs to generate")
     parser.add_argument("--dry-run", action="store_true",
-                        help="Search + scrape only; save to data/scraped_jobs.json for agentic mode")
+                        help="Search + scrape only; save to data/all_scraped.json")
+    parser.add_argument("--from-json", metavar="FILE", default=None,
+                        help="Skip search+scrape; load jobs from JSON file (e.g. data/all_scraped.json)")
     parser.add_argument("--skip-config-sync", action="store_true",
                         help="Skip auto-update of scoring config from candidate profile")
     args = parser.parse_args()
@@ -591,4 +612,5 @@ if __name__ == "__main__":
             max_per_board=args.max_per_board,
             top_n=args.top_n,
             skip_config_sync=args.skip_config_sync,
+            from_json=args.from_json,
         )
