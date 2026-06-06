@@ -4,6 +4,7 @@ SEARCH_TEMPLATES: dict[str, str] = {
     "Workday":        "site:myworkdayjobs.com {keywords}",
     "Workable":       'site:apply.workable.com "{keywords}" "Israel"',
     "Greenhouse":     'site:job-boards.greenhouse.io "Tel Aviv" "{keywords}"',
+    "Comeet":         'site:comeet.com/jobs "{keywords}" "israel"',
     "LinkedIn_jobs":  'site:linkedin.com/jobs/view "{keywords}" "tel aviv"',
     "LinkedIn_posts": 'site:linkedin.com/posts "{keywords}" "hiring" "israel"',
 }

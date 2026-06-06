@@ -32,6 +32,8 @@ def detect_source(url: str) -> str:
         return "workday"
     if re.search(r"linkedin\.com", url):
         return "linkedin"
+    if re.search(r"comeet\.com", url):
+        return "comeet"
     return "generic"
 
 
@@ -40,6 +42,7 @@ def scrape_url(url: str) -> ScrapedJob:
     from src.scrapers.workable import WorkableScraper
     from src.scrapers.workday import WorkdayScraper
     from src.scrapers.linkedin import LinkedInScraper
+    from src.scrapers.comeet import ComeetScraper
     from src.scrapers.generic import GenericScraper
 
     source = detect_source(url)
@@ -49,6 +52,7 @@ def scrape_url(url: str) -> ScrapedJob:
         "workable":   WorkableScraper,
         "workday":    WorkdayScraper,
         "linkedin":   LinkedInScraper,
+        "comeet":     ComeetScraper,
         "generic":    GenericScraper,
     }
     scraper_cls = scraper_map.get(source, GenericScraper)
