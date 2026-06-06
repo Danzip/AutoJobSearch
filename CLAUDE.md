@@ -22,6 +22,10 @@ pytest tests/ -v
 pytest tests/test_scorer.py::test_high_cv_role_scores_above_75 -v
 ```
 
+> **⚠️ API TOKENS ARE ONLY REQUIRED FOR THE FULL PIPELINE (analyze + score + generate CVs).**
+> **`--dry-run` (search + scrape) requires NO API tokens and works completely offline.**
+> **`--from-json` on an existing scraped file also requires NO API tokens until the analyze step.**
+
 ## Architecture
 
 Single-file Streamlit app (`app.py`) with page routing via `st.session_state.page`. All pages are functions in that file. Backend is SQLite via `src/db.py`.
