@@ -1,0 +1,15 @@
+companies:
+  - name: Regulus
+    slug: regulus/9A.00D
+  - name: Rail Vision
+    slug: railvision/84.000
+  - name: Autobrains
+    slug: autobrains/57.004
+  - name: Foresight Automotive
+    slug: foresightauto/13.000
+  - name: Aeronautics
+    slug: aeronautics/72.002
+  - name: Pixellot
+    slug: pixellot/BA.00B
+  - name: Samsung Israel
+    slug: samsung/D4.005

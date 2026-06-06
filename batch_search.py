@@ -24,6 +24,7 @@ from src.analyzer import analyze_job, batch_analyze
 from src.generator import generate_application_content
 from src.job_search import search_jobs, ALL_BOARDS
 from src.job_search_workday import search_workday_companies
+from src.job_search_comeet import search_comeet_companies
 from src.llm import get_analyze_llm, get_generate_llm, get_review_llm
 from src.referral_search import find_referral_targets, write_referral_targets_md
 from src.scorer import score_requirements
@@ -77,7 +78,9 @@ def run_batch(
 
     print("  Direct Workday company search:")
     workday_direct = search_workday_companies(keywords, max_per_company=max_per_board)
-    print(f"  → {len(urls)} DDG URLs + {len(workday_direct)} Workday direct\n")
+    print("  Direct Comeet company search:")
+    comeet_direct = search_comeet_companies(keywords)
+    print(f"  → {len(urls)} DDG + {len(workday_direct)} Workday + {len(comeet_direct)} Comeet direct\n")
 
     # ── 2. Scrape ──────────────────────────────────────────────────────────────
     _step(2, 4, "Fetching job descriptions")
@@ -108,6 +111,12 @@ def run_batch(
             ),
         })
         print(f"  OK    {wd['title'][:55]}  [{wd['company']}]")
+
+    # Merge Comeet direct URLs into the scrape queue
+    for cd in comeet_direct:
+        if cd["url"] not in seen_urls:
+            urls.append({"url": cd["url"], "board": "Comeet",
+                         "title": cd["title"], "company": cd["company"]})
 
     for r in urls:
         if r["url"] in seen_urls:
@@ -504,6 +513,8 @@ if __name__ == "__main__":
 
         print("  Direct Workday company search:")
         workday_direct = search_workday_companies(args.keywords, max_per_company=args.max_per_board)
+        print("  Direct Comeet company search:")
+        comeet_direct = search_comeet_companies(args.keywords)
 
         from src.scrapers.date_utils import is_stale
         max_age = load_config().get("search", {}).get("max_job_age_days", 180)
@@ -525,6 +536,12 @@ if __name__ == "__main__":
                             "description": wd["description"],
                             "posted_date": posted})
             print(f"  OK  {wd['title'][:60]}  [{wd['company']}]")
+
+        # Add Comeet direct URLs to scrape queue
+        for cd in comeet_direct:
+            if cd["url"] not in seen_urls:
+                urls.append({"url": cd["url"], "board": "Comeet",
+                             "title": cd["title"], "company": cd["company"]})
 
         for r in urls:
             if r["url"] in seen_urls:
