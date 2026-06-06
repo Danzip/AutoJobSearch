@@ -1,0 +1,39 @@
+# Direct Workday API search — bypasses DuckDuckGo and JS rendering.
+# Each entry is queried directly with Israel location filter + CV keywords.
+#
+# Fields:
+#   name:         Display name
+#   subdomain:    {name}.wd{N} part of the Workday URL
+#   board:        Job board slug (from the URL path)
+#   location_ids: Workday location facet IDs for Israel offices ([] = use text_search instead)
+#   text_search:  Appended to the keyword search when location_ids is empty
+#   keywords:     Additional search terms (combined with the main batch keywords)
+
+companies:
+  - name: Intel
+    subdomain: intel.wd1
+    board: External
+    location_ids:
+      - "1e4a4eb3adf101aaeda8a474bf818ecd"   # Israel, Petah-Tikva
+    keywords: ""
+
+  - name: General Motors
+    subdomain: generalmotors.wd5
+    board: Careers_GM
+    location_ids: []
+    text_search: "herzliya"
+    keywords: ""
+
+  - name: Applied Materials
+    subdomain: amat.wd1
+    board: External
+    location_ids:
+      - "084562884af243748dad7c84c304d89a"   # Israel
+    keywords: ""
+
+  - name: NVIDIA
+    subdomain: nvidia.wd5
+    board: NVIDIAExternalCareerSite
+    location_ids: []
+    text_search: "yokneam israel"
+    keywords: "computer vision"

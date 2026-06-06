@@ -23,6 +23,7 @@ import src.db as db
 from src.analyzer import analyze_job, batch_analyze
 from src.generator import generate_application_content
 from src.job_search import search_jobs, ALL_BOARDS
+from src.job_search_workday import search_workday_companies
 from src.llm import get_analyze_llm, get_generate_llm, get_review_llm
 from src.referral_search import find_referral_targets, write_referral_targets_md
 from src.scorer import score_requirements
@@ -72,12 +73,39 @@ def run_batch(
     _step(1, 4, "Searching job boards")
     raw = search_jobs(keywords, boards, max_results=max_per_board)
     urls = [r for r in raw if r.get("url")]
-    print(f"  → {len(urls)} URLs found\n")
+    print(f"  DuckDuckGo: {len(urls)} URLs found")
+
+    print("  Direct Workday company search:")
+    workday_direct = search_workday_companies(keywords, max_per_company=max_per_board)
+    print(f"  → {len(urls)} DDG URLs + {len(workday_direct)} Workday direct\n")
 
     # ── 2. Scrape ──────────────────────────────────────────────────────────────
     _step(2, 4, "Fetching job descriptions")
     scraped = []
+
+    # Workday direct results already have descriptions — add them immediately
+    seen_urls = set()
+    for wd in workday_direct:
+        if wd["url"] in seen_urls:
+            continue
+        seen_urls.add(wd["url"])
+        from src.scrapers.base import ScrapedJob
+        scraped.append({
+            "url": wd["url"],
+            "board": wd["board"],
+            "scraped": ScrapedJob(
+                title=wd["title"],
+                company=wd["company"],
+                description=wd["description"],
+                source="workday_api",
+            ),
+        })
+        print(f"  OK    {wd['title'][:55]}  [{wd['company']}]")
+
     for r in urls:
+        if r["url"] in seen_urls:
+            continue
+        seen_urls.add(r["url"])
         try:
             job = scrape_url(r["url"])
             if len(job.description.strip()) < 80:
@@ -93,7 +121,7 @@ def run_batch(
         except (ScraperError, Exception) as exc:
             print(f"  FAIL  {r['url'][:60]}  —  {exc}")
         time.sleep(0.4)
-    print(f"\n  → {len(scraped)}/{len(urls)} scraped successfully\n")
+    print(f"\n  → {len(scraped)} jobs with real descriptions\n")
 
     # ── 3. Analyze + score (Batch API — 50% discount) ────────────────────────
     _step(3, 4, f"Analyzing and scoring {len(scraped)} jobs")
@@ -461,9 +489,27 @@ if __name__ == "__main__":
         _banner("DRY RUN — search + scrape only")
         raw = search_jobs(args.keywords, args.boards, max_results=args.max_per_board)
         urls = [r for r in raw if r.get("url")]
-        print(f"  {len(urls)} URLs found\n")
+        print(f"  DDG: {len(urls)} URLs found")
+
+        print("  Direct Workday company search:")
+        workday_direct = search_workday_companies(args.keywords, max_per_company=args.max_per_board)
+
         scraped = []
+        seen_urls = set()
+
+        for wd in workday_direct:
+            if wd["url"] in seen_urls:
+                continue
+            seen_urls.add(wd["url"])
+            scraped.append({"url": wd["url"], "board": wd["board"],
+                            "title": wd["title"], "company": wd["company"],
+                            "description": wd["description"]})
+            print(f"  OK  {wd['title'][:60]}  [{wd['company']}]")
+
         for r in urls:
+            if r["url"] in seen_urls:
+                continue
+            seen_urls.add(r["url"])
             try:
                 job = scrape_url(r["url"])
                 if len(job.description.strip()) < 80:
