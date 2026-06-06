@@ -63,10 +63,25 @@ def generate_application_content(
         from src.reviewer import review_cv
         cv_draft = review_cv(job.get("description", ""), cv_draft, reviewer_llm)
 
-    return {
+    content = {
         "cv_draft_markdown": cv_draft,
         "cover_letter":      data.get("cover_letter", ""),
         "linkedin_message":  data.get("linkedin_message", ""),
         "recruiter_email":   data.get("recruiter_email", ""),
         "talking_points":    data.get("talking_points", []),
     }
+    _fix_em_dashes(content)
+    return content
+
+
+def _fix_em_dashes(content: dict) -> None:
+    """Replace em dashes (—) with plain hyphens in all text fields. Warns if found."""
+    fields = ["cv_draft_markdown", "cover_letter", "linkedin_message", "recruiter_email"]
+    found = []
+    for field in fields:
+        val = content.get(field, "")
+        if "—" in val:
+            found.append(field)
+            content[field] = val.replace("—", "-")
+    if found:
+        print(f"  WARN  em dashes found and replaced in: {', '.join(found)}")
