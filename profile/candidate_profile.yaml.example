@@ -1,0 +1,88 @@
+personal:
+  name: Your Name
+  email: you@example.com
+  phone: "+1 555 000 0000"
+  location: City, Country
+  linkedin: linkedin.com/in/yourhandle
+  years_experience: 5
+  education:
+    degree: B.Sc. Computer Science
+    institution: University Name
+    gpa: 90
+    years: "2016-2020"
+    final_project: |
+      Brief description of final project. Grade.
+
+key_metrics:
+  # Exact numbers to use verbatim in every generated CV — never rounded
+  - "X FPS on [hardware] (from Y FPS) - 2x throughput gain"
+  - "X MB deployed model (from Y MB) - Zx compression"
+  - "0.XXX mAP on [benchmark dataset]"
+
+hard_limits:
+  # Skills you must NEVER claim — things you'd be embarrassed to be asked about
+  - "Technology you don't know"
+  - "Framework you haven't used"
+
+stories:
+  - id: company_role_shortname
+    tags:
+      - relevant_tag
+      - another_tag
+    company: "Company Name"
+    period: "2020-2022"
+    headline: "One-line summary of what you built or achieved"
+    body: |
+      Detailed description of the work. What problem you solved, how you solved it,
+      what the result was. Be specific — the LLM uses this verbatim to write CV bullets.
+      Include exact numbers, tools used, and why the approach was non-obvious.
+    framing_notes: |
+      Optional: notes for how to position this story for different roles.
+      What to emphasize, what to avoid claiming, relevant context.
+
+  - id: another_story
+    tags:
+      - tag1
+      - tag2
+    company: "Another Company"
+    period: "2022-2024"
+    headline: "Another achievement headline"
+    body: |
+      Description of the work...
+
+# Suggested tags (add your own):
+# edge_ai, production, real_time, detection, segmentation, tracking, classification
+# model_compression, quantization, pruning, onnx
+# geometry, calibration, sensor_fusion, imu, camera
+# data_strategy, annotation, synthetic_data
+# pipeline_ownership, cross_team, code_review
+# research, literature_review, structured_process
+
+skills:
+  primary:
+    - Computer Vision
+    - Deep Learning
+    - Python
+    - PyTorch
+  secondary:
+    - Skill 1
+    - Skill 2
+  tools:
+    - Tool 1
+    - Tool 2
+
+example_cv: |
+  # Your Name - Senior [Domain] Engineer
+  you@example.com | +1 555 000 0000 | City | linkedin.com/in/yourhandle
+
+  ## Experience
+
+  ### Role - Company (2022-2024)
+  - Bullet 1 with exact metric
+  - Bullet 2 with specific achievement
+
+  ## Education
+  B.Sc. Computer Science, University Name, GPA 90 (2016-2020)
+
+  ## Core Skills
+  Skill 1 | Skill 2 | Tool 1 | Tool 2

@@ -1,0 +1,10 @@
+.env
+.venv/
+data/
+outputs/
+input/
+profile/personal.yaml
+profile/candidate_profile.yaml
+__pycache__/
+*.pyc
+*.pyo

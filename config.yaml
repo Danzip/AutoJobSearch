@@ -1,0 +1,22 @@
+llm:
+  provider: anthropic
+
+  # Use a fast/cheap model for extraction; better model for CV generation
+  analyze_model: claude-haiku-4-5-20251001   # ~10x cheaper than Sonnet
+  generate_model: claude-sonnet-4-6          # better writing quality
+
+  # Max chars of job description sent to LLM (truncated beyond this)
+  max_description_chars: 4000
+
+  # Max stories sent to generator (selected by tag relevance)
+  max_stories_in_prompt: 6
+
+scoring:
+  threshold: 60
+
+search:
+  max_results_per_board: 10
+
+token_tracking:
+  enabled: true                      # log every LLM call to data/token_usage.jsonl
+  warn_per_call_tokens: 8000         # print warning if a single call exceeds this
