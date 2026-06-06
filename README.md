@@ -81,6 +81,15 @@ Search → Scrape → Analyze → Score → Generate → Review
   (free)   (free)   (LLM)    (free)   (LLM)     (you)
 ```
 
+> **No API credits needed when running through Claude Code.**
+> Claude Code (this terminal) acts as the LLM for Analyze and Generate steps — using your Claude subscription, not API credits.
+> API credits are only required when running `batch_search.py` directly (unattended, outside this terminal).
+>
+> **Recommended flow:**
+> 1. `python batch_search.py --dry-run` — search + scrape (free, no LLM)
+> 2. Tell Claude Code: *"Analyze and generate CVs from data/all_scraped.json"*
+> 3. Claude Code scores all jobs, generates CVs for ≥60 scorers, saves everything to the app
+
 1. **Search** - queries Greenhouse, Workable, Comeet, and Workday via DuckDuckGo `site:` operators
 2. **Scrape** - fetches job descriptions (Greenhouse uses their public JSON API; others use BeautifulSoup)
 3. **Analyze** - sends the description to the LLM, extracts structured requirements (skills, domains, relevance scores 0-10)

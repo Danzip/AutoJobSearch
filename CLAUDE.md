@@ -22,9 +22,16 @@ pytest tests/ -v
 pytest tests/test_scorer.py::test_high_cv_role_scores_above_75 -v
 ```
 
-> **⚠️ API TOKENS ARE ONLY REQUIRED FOR THE FULL PIPELINE (analyze + score + generate CVs).**
-> **`--dry-run` (search + scrape) requires NO API tokens and works completely offline.**
-> **`--from-json` on an existing scraped file also requires NO API tokens until the analyze step.**
+> **⚠️ IMPORTANT — HOW THE PIPELINE WORKS:**
+>
+> **Running through Claude Code (this terminal) = ZERO API cost.**
+> Claude Code itself acts as the LLM for all Analyze and Generate steps.
+> API tokens are ONLY needed when `batch_search.py` runs unattended (outside this terminal).
+>
+> **Standard workflow (no API cost):**
+> 1. `python batch_search.py --dry-run --skip-config-sync` — search + scrape → `data/all_scraped.json`
+> 2. Tell Claude Code: *"Analyze and generate CVs from data/all_scraped.json"*
+> 3. Claude Code analyzes each job, scores them, generates CVs for score ≥60, saves to DB + outputs/
 
 ## Architecture
 
