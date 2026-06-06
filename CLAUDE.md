@@ -144,6 +144,27 @@ Token usage is logged to `data/token_usage.jsonl` and visible in Settings > Toke
 
 **Do NOT add streaming** - it does not reduce token cost, only improves latency.
 
+## Scraping Performance
+
+Comeet (Angular SPA) requires Playwright. The bottleneck is per-page load time (~4-6s each).
+
+| Technique | Where | Saving |
+|---|---|---|
+| **Parallel job URL scraping** | `scrape_batch()` in `src/scrapers/comeet.py` | ~4.5× faster (6 browsers in parallel) |
+| **Parallel company page discovery** | `search_comeet_companies()` in `src/job_search_comeet.py` | ~6× faster (14 pages → 6 parallel) |
+
+Tune workers in `config.yaml` (each worker = one Chromium instance, ~150 MB RAM):
+```yaml
+scraping:
+  comeet_workers: 6
+```
+
+**Key Comeet scraper details:**
+- Uses `wait_until="domcontentloaded"` + 4000ms explicit wait (not `networkidle` — Angular makes continuous requests)
+- `page.inner_text("body")` for full description (not a CSS selector — avoids partial div capture)
+- Company name extracted from URL slug, not DOM (DOM shows "All Jobs" navigation noise)
+- Closed/redirect jobs detected by `len(description) < 200` (not by DOM element presence)
+
 ## CV Writing Rules (enforced in every generated CV)
 
 These live in `src/prompts.py` GENERATOR_SYSTEM and are injected into every LLM generation call:

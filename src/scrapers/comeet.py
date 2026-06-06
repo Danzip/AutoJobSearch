@@ -23,28 +23,22 @@ def _playwright_scrape(url: str) -> ScrapedJob:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         try:
-            page.goto(url, wait_until="networkidle", timeout=_TIMEOUT)
-            page.wait_for_timeout(2000)
+            page.goto(url, wait_until="domcontentloaded", timeout=_TIMEOUT)
+            page.wait_for_timeout(4000)
 
-            # Detect if we landed on a company listing (job is closed/redirected)
-            if page.query_selector(".positionsList, .positionItem"):
-                return ScrapedJob()  # empty → batch will skip (too short)
-
-            # Specific job page selectors
-            title    = _text(page, ".positionTitle, h1")
-            company  = _text(page, ".companyName, .company-name, [class*='company']")
-            location = _text(page, ".positionLocation, [class*='location'], .fa-map-marker")
-            desc_el  = (
-                page.query_selector(".positionDetails, .userDesignedContent")
-                or page.query_selector("[class*='description']")
-            )
-            description = desc_el.inner_text().strip() if desc_el else page.inner_text("body")
+            title       = _text(page, ".positionTitle, h1")
+            location    = _text(page, ".positionLocation, [class*='location']")
+            description = page.inner_text("body").strip()
             date_text   = _text(page, "[class*='date'], [class*='posted'], time")
             posted_date = parse_relative_date(date_text)
 
-            if not company:
-                m = re.search(r"comeet\.com/jobs/([^/]+)", url)
-                company = m.group(1).replace("-", " ").title() if m else ""
+            # Closed job redirects to company listing: meaningful description won't be present
+            if len(description) < 200:
+                return ScrapedJob()
+
+            # Use URL slug — DOM selectors pick up "All Jobs" navigation noise
+            m = re.search(r"comeet\.com/jobs/([^/]+)", url)
+            company = m.group(1).replace("-", " ").title() if m else ""
 
         finally:
             browser.close()
@@ -73,8 +67,8 @@ def scrape_company_page(company_slug: str) -> list[dict]:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         try:
-            page.goto(base_url, wait_until="networkidle", timeout=_TIMEOUT)
-            page.wait_for_timeout(2000)
+            page.goto(base_url, wait_until="domcontentloaded", timeout=_TIMEOUT)
+            page.wait_for_timeout(3000)
 
             items = page.query_selector_all(".positionItem")
             for item in items:
@@ -100,6 +94,22 @@ def _text(page, selector: str) -> str:
             if t:
                 return t
     return ""
+
+
+def scrape_batch(urls: list[str], workers: int = 6) -> list[ScrapedJob]:
+    """Scrape multiple Comeet job URLs in parallel. Each thread owns its own browser."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    results: dict[str, ScrapedJob] = {}
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_url = {executor.submit(_playwright_scrape, url): url for url in urls}
+        for future in as_completed(future_to_url):
+            url = future_to_url[future]
+            try:
+                results[url] = future.result()
+            except Exception:
+                results[url] = ScrapedJob()
+    return [results.get(url, ScrapedJob()) for url in urls]
 
 
 class ComeetScraper(BaseScraper):

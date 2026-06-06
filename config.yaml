@@ -74,6 +74,9 @@ search:
   max_results_per_board: 10
   max_job_age_days: 180      # jobs older than this are skipped as likely filled
 
+scraping:
+  comeet_workers: 6   # parallel browser instances for Comeet job + company-page scraping
+
 token_tracking:
   enabled: true                      # log every LLM call to data/token_usage.jsonl
   warn_per_call_tokens: 8000         # print warning if a single call exceeds this

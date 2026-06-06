@@ -16,37 +16,51 @@ def _load_companies() -> list[dict]:
         return yaml.safe_load(f).get("companies", [])
 
 
-def search_comeet_companies(keywords: str = "") -> list[dict]:
-    """Scrape current openings from all configured Comeet companies."""
+def search_comeet_companies(keywords: str = "", workers: int = 6) -> list[dict]:
+    """Scrape current openings from all configured Comeet companies in parallel."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from src.scrapers.comeet import scrape_company_page
 
     companies = _load_companies()
-    results = []
     kw_lower = keywords.lower() if keywords else ""
 
-    for company in companies:
-        try:
-            jobs = scrape_company_page(company["slug"])
-            matched = []
-            for j in jobs:
-                # If keywords given, filter by title relevance
-                if kw_lower and not any(
-                    w in j["title"].lower()
-                    for w in kw_lower.split()
-                    if len(w) > 3
-                ):
-                    continue
-                matched.append({
-                    "board": "Comeet",
-                    "title": j["title"],
-                    "company": company["name"],
-                    "url": j["url"],
-                    "description": "",   # fetched later by scrape_url
-                    "posted_date": "",
-                })
-            print(f"  Comeet/{company['name']}: {len(matched)} jobs (of {len(jobs)} total)")
-            results.extend(matched)
-        except Exception as e:
-            print(f"  Comeet/{company['name']}: ERROR {e}")
+    def _scrape_one(company: dict):
+        jobs = scrape_company_page(company["slug"])
+        matched = []
+        for j in jobs:
+            if kw_lower and not any(
+                w in j["title"].lower()
+                for w in kw_lower.split()
+                if len(w) > 3
+            ):
+                continue
+            matched.append({
+                "board": "Comeet",
+                "title": j["title"],
+                "company": company["name"],
+                "url": j["url"],
+                "description": "",
+                "posted_date": "",
+            })
+        return company["name"], len(jobs), matched
 
+    # Scrape all company pages in parallel; collect into ordered map
+    results_map: dict[str, tuple] = {}
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_company = {executor.submit(_scrape_one, c): c for c in companies}
+        for future in as_completed(future_to_company):
+            company = future_to_company[future]
+            try:
+                name, total, matched = future.result()
+                results_map[name] = (total, matched)
+            except Exception as e:
+                results_map[company["name"]] = (0, [])
+                print(f"  Comeet/{company['name']}: ERROR {e}")
+
+    # Print in original company order, collect results
+    results = []
+    for company in companies:
+        total, matched = results_map.get(company["name"], (0, []))
+        print(f"  Comeet/{company['name']}: {len(matched)} jobs (of {total} total)")
+        results.extend(matched)
     return results

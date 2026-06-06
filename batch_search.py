@@ -39,6 +39,19 @@ def slugify(text: str, max_len: int = 35) -> str:
     return text[:max_len].strip("_")
 
 
+_CV_SIGNAL_KEYWORDS = [
+    "computer vision", "deep learning", "machine learning",
+    "neural network", "object detection", "image processing",
+    "algorithm", "perception", "cv engineer", "dl engineer",
+    "image quality", "image sensor",
+]
+
+def _has_cv_signal(title: str, description: str = "") -> bool:
+    """Return True if job title contains CV/DL signal. Title-only — descriptions
+    contain company boilerplate that matches too broadly."""
+    return any(kw in title.lower() for kw in _CV_SIGNAL_KEYWORDS)
+
+
 # ─── Main pipeline ─────────────────────────────────────────────────────────────
 
 def run_batch(
@@ -137,10 +150,31 @@ def run_batch(
                 urls.append({"url": cd["url"], "board": "Comeet",
                              "title": cd["title"], "company": cd["company"]})
 
-        for r in urls:
-            if r["url"] in seen_urls:
-                continue
+        pending = [r for r in urls if r["url"] not in seen_urls]
+        for r in pending:
             seen_urls.add(r["url"])
+
+        comeet_pending = [r for r in pending if "comeet.com" in r["url"]]
+        other_pending  = [r for r in pending if "comeet.com" not in r["url"]]
+
+        if comeet_pending:
+            from src.scrapers.comeet import scrape_batch as comeet_scrape_batch
+            workers = load_config().get("scraping", {}).get("comeet_workers", 6)
+            print(f"  Scraping {len(comeet_pending)} Comeet URLs in parallel (workers={workers})...")
+            t0 = time.time()
+            comeet_jobs = comeet_scrape_batch([r["url"] for r in comeet_pending], workers=workers)
+            print(f"  Comeet batch done in {time.time()-t0:.1f}s")
+            for r, job in zip(comeet_pending, comeet_jobs):
+                if len(job.description.strip()) < 80:
+                    print(f"  SKIP  (too short)  {r['url'][:70]}")
+                    continue
+                if is_stale(job.posted_date, max_age):
+                    print(f"  SKIP  (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
+                    continue
+                scraped.append({"url": r["url"], "board": r["board"], "scraped": job})
+                print(f"  OK    {(job.title or r['title'])[:55]}")
+
+        for r in other_pending:
             try:
                 job = scrape_url(r["url"])
                 if len(job.description.strip()) < 80:
@@ -149,13 +183,8 @@ def run_batch(
                 if is_stale(job.posted_date, max_age):
                     print(f"  SKIP  (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
                     continue
-                scraped.append({
-                    "url": r["url"],
-                    "board": r["board"],
-                    "scraped": job,
-                })
-                title = (job.title or r["title"])[:55]
-                print(f"  OK    {title}")
+                scraped.append({"url": r["url"], "board": r["board"], "scraped": job})
+                print(f"  OK    {(job.title or r['title'])[:55]}")
             except (ScraperError, Exception) as exc:
                 print(f"  FAIL  {r['url'][:60]}  —  {exc}")
             time.sleep(0.4)
@@ -566,6 +595,9 @@ if __name__ == "__main__":
                 print(f"  SKIP (stale {posted})  {wd['title'][:55]}")
                 stale_count += 1
                 continue
+            if not _has_cv_signal(wd["title"], wd["description"]):
+                print(f"  SKIP (no CV signal)  {wd['title'][:55]}")
+                continue
             scraped.append({"url": wd["url"], "board": wd["board"],
                             "title": wd["title"], "company": wd["company"],
                             "description": wd["description"],
@@ -578,10 +610,39 @@ if __name__ == "__main__":
                 urls.append({"url": cd["url"], "board": "Comeet",
                              "title": cd["title"], "company": cd["company"]})
 
-        for r in urls:
-            if r["url"] in seen_urls:
-                continue
+        pending = [r for r in urls if r["url"] not in seen_urls]
+        for r in pending:
             seen_urls.add(r["url"])
+
+        comeet_pending = [r for r in pending if "comeet.com" in r["url"]]
+        other_pending  = [r for r in pending if "comeet.com" not in r["url"]]
+
+        if comeet_pending:
+            from src.scrapers.comeet import scrape_batch as comeet_scrape_batch
+            workers = load_config().get("scraping", {}).get("comeet_workers", 6)
+            print(f"  Scraping {len(comeet_pending)} Comeet URLs in parallel (workers={workers})...")
+            t0 = time.time()
+            comeet_jobs = comeet_scrape_batch([r["url"] for r in comeet_pending], workers=workers)
+            print(f"  Comeet batch done in {time.time()-t0:.1f}s")
+            for r, job in zip(comeet_pending, comeet_jobs):
+                if len(job.description.strip()) < 80:
+                    continue
+                if is_stale(job.posted_date, max_age):
+                    print(f"  SKIP (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
+                    stale_count += 1
+                    continue
+                title = job.title or r["title"]
+                if not _has_cv_signal(title, job.description):
+                    print(f"  SKIP (no CV signal)  {title[:55]}")
+                    continue
+                scraped.append({"url": r["url"], "board": r["board"],
+                                "title": title,
+                                "company": job.company or r.get("company", ""),
+                                "description": job.description,
+                                "posted_date": job.posted_date})
+                print(f"  OK  {title[:60]}")
+
+        for r in other_pending:
             try:
                 job = scrape_url(r["url"])
                 if len(job.description.strip()) < 80:
@@ -590,12 +651,16 @@ if __name__ == "__main__":
                     print(f"  SKIP (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
                     stale_count += 1
                     continue
+                title = job.title or r["title"]
+                if not _has_cv_signal(title, job.description):
+                    print(f"  SKIP (no CV signal)  {title[:55]}")
+                    continue
                 scraped.append({"url": r["url"], "board": r["board"],
-                                "title": job.title or r["title"],
-                                "company": job.company or "",
+                                "title": title,
+                                "company": job.company or r.get("company", ""),
                                 "description": job.description,
                                 "posted_date": job.posted_date})
-                print(f"  OK  {(job.title or r['title'])[:60]}")
+                print(f"  OK  {title[:60]}")
             except Exception as exc:
                 print(f"  FAIL  {r['url'][:60]}  —  {exc}")
         if stale_count:
