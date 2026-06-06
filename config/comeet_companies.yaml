@@ -13,3 +13,11 @@ companies:
     slug: pixellot/BA.00B
   - name: Samsung Israel
     slug: samsung/D4.005
+  - name: UVeye
+    slug: uveye/92.00F
+  - name: Hailo
+    slug: hailo/D5.007
+  - name: CEVA
+    slug: ceva/76.005
+  - name: Exodigo
+    slug: exodigo/89.005
