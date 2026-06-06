@@ -96,7 +96,7 @@ Search → Scrape → Analyze → Score → Generate → Review
 |---|---|
 | **Job Search** | Enter keywords, pick boards, get a list of URLs to add to inbox |
 | **Job Inbox** | Table of all jobs sorted by score. Click a row to open Job Detail. |
-| **Job Detail** | See job description, analysis, score, generated CV and messages. Analyze / Generate / Mark Applied / Skip buttons. |
+| **Job Detail** | See job description, analysis, score, generated CV, cover letter, and messages. Analyze / Generate / Mark Applied / Skip buttons. |
 | **Application Tracker** | All jobs grouped by status (interesting → applied → interview → offer) |
 | **Settings / Profile** | API key status, config, token usage, profile notes editor |
 
@@ -147,6 +147,7 @@ SUMMARY.md              ← stats + ranked table of all analyzed jobs
 01_Company_Role/
   description.md        ← full job description + original URL
   cv.md                 ← CV draft, LinkedIn message, recruiter email, talking points
+  cover_letter.md       ← 4-paragraph ~280-word cover letter tailored to the role
   cv.pdf                ← 1-page formatted PDF, verified to fit
   summary.md            ← score breakdown, match reasons, concerns, clarifying questions
   referral_targets.md   ← 3-5 LinkedIn employee contacts + connection message template
