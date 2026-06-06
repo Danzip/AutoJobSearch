@@ -1,7 +1,6 @@
 from typing import Optional
 
 SEARCH_TEMPLATES: dict[str, str] = {
-    "Comeet":     "site:www.comeet.com/jobs {keywords}",
     "Workday":    "site:myworkdayjobs.com {keywords}",
     "Workable":   'site:apply.workable.com "{keywords}" "Israel"',
     "Greenhouse": 'site:job-boards.greenhouse.io "Tel Aviv" "{keywords}"',

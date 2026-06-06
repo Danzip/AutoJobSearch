@@ -29,9 +29,7 @@ def detect_source(url: str) -> str:
         return "workable"
     if re.search(r"myworkdayjobs\.com|workday\.com", url):
         return "workday"
-    if re.search(r"comeet\.co|comeet\.com", url):
-        return "comeet"
-    if re.search(r"linkedin\.com", url):
+if re.search(r"linkedin\.com", url):
         return "linkedin"
     return "generic"
 
@@ -40,7 +38,6 @@ def scrape_url(url: str) -> ScrapedJob:
     from src.scrapers.greenhouse import GreenhouseScraper
     from src.scrapers.workable import WorkableScraper
     from src.scrapers.workday import WorkdayScraper
-    from src.scrapers.comeet import ComeetScraper
     from src.scrapers.linkedin import LinkedInScraper
     from src.scrapers.generic import GenericScraper
 
@@ -50,7 +47,6 @@ def scrape_url(url: str) -> ScrapedJob:
         "greenhouse": GreenhouseScraper,
         "workable":   WorkableScraper,
         "workday":    WorkdayScraper,
-        "comeet":     ComeetScraper,
         "linkedin":   LinkedInScraper,
         "generic":    GenericScraper,
     }
