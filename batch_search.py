@@ -505,16 +505,25 @@ if __name__ == "__main__":
         print("  Direct Workday company search:")
         workday_direct = search_workday_companies(args.keywords, max_per_company=args.max_per_board)
 
+        from src.scrapers.date_utils import is_stale
+        max_age = load_config().get("search", {}).get("max_job_age_days", 180)
         scraped = []
         seen_urls = set()
+        stale_count = 0
 
         for wd in workday_direct:
             if wd["url"] in seen_urls:
                 continue
             seen_urls.add(wd["url"])
+            posted = wd.get("posted_date", "")
+            if is_stale(posted, max_age):
+                print(f"  SKIP (stale {posted})  {wd['title'][:55]}")
+                stale_count += 1
+                continue
             scraped.append({"url": wd["url"], "board": wd["board"],
                             "title": wd["title"], "company": wd["company"],
-                            "description": wd["description"]})
+                            "description": wd["description"],
+                            "posted_date": posted})
             print(f"  OK  {wd['title'][:60]}  [{wd['company']}]")
 
         for r in urls:
@@ -525,13 +534,20 @@ if __name__ == "__main__":
                 job = scrape_url(r["url"])
                 if len(job.description.strip()) < 80:
                     continue
+                if is_stale(job.posted_date, max_age):
+                    print(f"  SKIP (stale {job.posted_date})  {(job.title or r['title'])[:55]}")
+                    stale_count += 1
+                    continue
                 scraped.append({"url": r["url"], "board": r["board"],
                                 "title": job.title or r["title"],
                                 "company": job.company or "",
-                                "description": job.description})
+                                "description": job.description,
+                                "posted_date": job.posted_date})
                 print(f"  OK  {(job.title or r['title'])[:60]}")
             except Exception as exc:
                 print(f"  FAIL  {r['url'][:60]}  —  {exc}")
+        if stale_count:
+            print(f"  → {stale_count} stale jobs filtered (>{max_age} days old)")
         out = Path("data") / "scraped_jobs.json"
         out.parent.mkdir(exist_ok=True)
         out.write_text(_json.dumps(scraped, indent=2, ensure_ascii=False))
