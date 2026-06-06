@@ -224,7 +224,7 @@ def run_batch(
     top_jobs_path.write_text(json.dumps(top, indent=2, ensure_ascii=False))
 
     print(f"\n{'─'*60}")
-    print(f"  Jobs found:            {len(urls)}")
+    print(f"  Jobs scraped:          {len(scraped)}")
     print(f"  Successfully analyzed: {len(analyzed)}")
     print(f"  Score ≥ 60:            {len(qualified)}")
     print(f"  Best match score:      {analyzed[0]['score']:.0f}/100")
