@@ -189,21 +189,35 @@ def run_batch(
         return out_dir
 
     analyzed.sort(key=lambda x: x["score"], reverse=True)
-    top = analyzed[:top_n]
+
+    # Save all non-stale jobs (scored or not) to all_scraped.json
+    all_scraped_path = Path("data") / "all_scraped.json"
+    all_scraped_path.write_text(json.dumps(analyzed, indent=2, ensure_ascii=False))
+
+    # Only jobs scoring >60 go to DB and get CVs
+    qualified = [j for j in analyzed if j["score"] >= 60]
+    top = qualified[:top_n]
 
     avg_all = sum(j["score"] for j in analyzed) / len(analyzed)
-    avg_top = sum(j["score"] for j in top) / len(top)
+
+    # Save top_jobs.json (>60 only)
+    top_jobs_path = Path("data") / "top_jobs.json"
+    top_jobs_path.write_text(json.dumps(top, indent=2, ensure_ascii=False))
 
     print(f"\n{'─'*60}")
     print(f"  Jobs found:            {len(urls)}")
     print(f"  Successfully analyzed: {len(analyzed)}")
+    print(f"  Score ≥ 60:            {len(qualified)}")
     print(f"  Best match score:      {analyzed[0]['score']:.0f}/100")
     print(f"  Average score:         {avg_all:.0f}/100")
-    print(f"  Top {len(top)} average:        {avg_top:.0f}/100")
     print(f"{'─'*60}\n")
 
-    # ── 4. Generate CVs for top N ─────────────────────────────────────────────
-    _step(4, 5, f"Generating CVs for top {len(top)} matches")
+    if not top:
+        print("No jobs scored above 60. Exiting.")
+        return out_dir
+
+    # ── 4. Generate CVs for top N (score ≥ 60 only) ──────────────────────────
+    _step(4, 5, f"Generating CVs for {len(top)} jobs (score ≥ 60)")
     for rank, job in enumerate(top, 1):
         dir_name = f"{rank:02d}_{slugify(job['company'])}_{slugify(job['title'])}"
         job_dir = out_dir / dir_name
@@ -245,8 +259,8 @@ def run_batch(
         print(f"  [{rank:2d}] {job['score']:.0f}/100  {job['company']} — {job['title'][:45]}")
         time.sleep(0.5)
 
-    # ── 5. Referral search for top N ──────────────────────────────────────────
-    _step(5, 5, f"Searching referral targets for top {len(top)} matches")
+    # ── 5. Referral search for score ≥ 60 jobs only ──────────────────────────
+    _step(5, 5, f"Searching referral targets for {len(top)} jobs (score ≥ 60)")
     for rank, job in enumerate(top, 1):
         dir_name = f"{rank:02d}_{slugify(job['company'])}_{slugify(job['title'])}"
         job_dir = out_dir / dir_name
@@ -256,7 +270,7 @@ def run_batch(
         print(f"  [{rank:2d}] {n} target{'s' if n != 1 else ''} found  {job['company']}")
         time.sleep(1.0)  # be polite to DuckDuckGo
 
-    # Overall summary
+    # Overall summary (all analyzed jobs, top = qualified ≥60 subset)
     _write_overall_summary(out_dir, keywords, boards, len(urls), analyzed, top)
 
     # Generate PDFs for all top-N CVs
@@ -565,11 +579,11 @@ if __name__ == "__main__":
                 print(f"  FAIL  {r['url'][:60]}  —  {exc}")
         if stale_count:
             print(f"  → {stale_count} stale jobs filtered (>{max_age} days old)")
-        out = Path("data") / "scraped_jobs.json"
+        out = Path("data") / "all_scraped.json"
         out.parent.mkdir(exist_ok=True)
         out.write_text(_json.dumps(scraped, indent=2, ensure_ascii=False))
         print(f"\n{len(scraped)} jobs saved to {out}")
-        print("Now tell Claude Code: 'Analyze and generate CVs from data/scraped_jobs.json'")
+        print("Run full pipeline (without --dry-run) to score and populate top_jobs.json")
     else:
         run_batch(
             keywords=args.keywords,
