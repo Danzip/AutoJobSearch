@@ -287,6 +287,7 @@ def _run_generation(job: dict, reqs: dict, angle: str):
                     "job_id": job["id"],
                     "selected_cv_angle": angle,
                     "cv_draft_markdown": content["cv_draft_markdown"],
+                    "cover_letter_draft": content.get("cover_letter", ""),
                     "linkedin_message_draft": content["linkedin_message"],
                     "recruiter_email_draft": content["recruiter_email"],
                     "talking_points": json.dumps(content["talking_points"]),
@@ -437,6 +438,9 @@ def page_detail():
             cv_draft = st.text_area(
                 "CV Draft (Markdown)", value=app.get("cv_draft_markdown", ""), height=300
             )
+            cover_letter = st.text_area(
+                "Cover Letter", value=app.get("cover_letter_draft", ""), height=250
+            )
             linkedin_msg = st.text_area(
                 "LinkedIn Message", value=app.get("linkedin_message_draft", ""), height=120
             )
@@ -466,6 +470,7 @@ def page_detail():
                             "job_id": job_id,
                             "selected_cv_angle": selected_angle,
                             "cv_draft_markdown": cv_draft,
+                            "cover_letter_draft": cover_letter,
                             "linkedin_message_draft": linkedin_msg,
                             "recruiter_email_draft": recruiter_email,
                             "talking_points": json.dumps(new_tp),

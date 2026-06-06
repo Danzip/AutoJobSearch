@@ -4,21 +4,30 @@ from src.llm import LLMProvider
 from src.prompts import ANALYZER_SYSTEM, analyzer_prompt
 from src.utils import extract_json_from_text, load_config
 
-_DEFAULTS = {
-    "company": "", "title": "", "seniority": "unknown",
-    "degree_required": "none",
-    "required_skills": [], "nice_to_have_skills": [], "domains": [],
-    "cv_relevance": 0, "dl_relevance": 0, "edge_ai_relevance": 0,
-    "realtime_relevance": 0, "tracking_relevance": 0, "geometry_relevance": 0,
-    "robotics_relevance": 0, "production_relevance": 0,
-    "reasons_to_apply": [], "concerns": [],
-}
+def _dim_keys() -> list[str]:
+    cfg = load_config()
+    return [d["key"] for d in cfg.get("scoring", {}).get("dimensions", [])]
+
+
+def _make_defaults() -> dict:
+    base = {
+        "company": "", "title": "", "seniority": "unknown",
+        "degree_required": "none",
+        "required_skills": [], "nice_to_have_skills": [], "domains": [],
+        "reasons_to_apply": [], "concerns": [],
+    }
+    for key in _dim_keys():
+        base[key] = 0
+    return base
+
+
+_DEFAULTS = _make_defaults()
 
 
 def _clamp(data: dict) -> dict:
-    result = {**_DEFAULTS, **data}
-    for key in ("cv_relevance", "dl_relevance", "edge_ai_relevance", "realtime_relevance",
-                "tracking_relevance", "geometry_relevance", "robotics_relevance", "production_relevance"):
+    defaults = _make_defaults()
+    result = {**defaults, **data}
+    for key in _dim_keys():
         result[key] = max(0, min(10, int(result.get(key, 0))))
     return result
 

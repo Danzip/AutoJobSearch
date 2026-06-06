@@ -212,7 +212,7 @@ def run_batch(
 
     _banner("DONE")
     print(f"Output directory : {out_dir}/")
-    print(f"Files per job    : description.md  cv.md  cv.pdf  summary.md")
+    print(f"Files per job    : description.md  cv.md  cover_letter.md  cv.pdf  summary.md  referral_targets.md")
     print(f"Streamlit        : http://localhost:8501  (Job Inbox shows all analyzed jobs)")
     print_token_summary()
     return out_dir
@@ -268,6 +268,12 @@ def _write_cv(job_dir: Path, job: dict, content: dict):
 ## Interview Talking Points
 
 {tp_text}
+""")
+
+    if content.get("cover_letter"):
+        (job_dir / "cover_letter.md").write_text(f"""# Cover Letter — {job['company']} / {job['title']}
+
+{content['cover_letter']}
 """)
 
 

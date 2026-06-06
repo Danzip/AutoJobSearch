@@ -4,6 +4,7 @@ llm:
   # Use a fast/cheap model for extraction; better model for CV generation
   analyze_model: claude-haiku-4-5-20251001   # ~10x cheaper than Sonnet
   generate_model: claude-sonnet-4-6          # better writing quality
+  review_model: claude-haiku-4-5-20251001    # haiku reviewer pass
 
   # Max chars of job description sent to LLM (truncated beyond this)
   max_description_chars: 4000
@@ -13,6 +14,57 @@ llm:
 
 scoring:
   threshold: 60
+
+  # Domains that trigger -20pt penalty (outside your domain expertise)
+  excluded_domains:
+    - backend
+    - fullstack
+    - full_stack
+    - data_engineering
+    - nlp
+    - llm
+
+  # If ALL of these keys are 0, apply -10pt zero-signal penalty
+  primary_keys:
+    - cv_relevance
+    - dl_relevance
+
+  # Score dimensions — change these to match your domain.
+  # max_pts for all dimensions must sum to 85 (seniority accounts for the remaining 15).
+  # key: field name extracted by the LLM; label: shown in score explanation
+  dimensions:
+    - key: cv_relevance
+      label: "Computer Vision"
+      max_pts: 15
+      description: "10=core CV role (detection/segmentation/perception), 5=CV used but not primary, 0=no CV"
+    - key: dl_relevance
+      label: "Deep Learning"
+      max_pts: 15
+      description: "10=deep learning is primary, 5=relevant, 0=not needed"
+    - key: realtime_relevance
+      label: "Real-time systems"
+      max_pts: 10
+      description: "10=real-time performance is a hard constraint, 5=mentioned, 0=batch/offline ok"
+    - key: edge_ai_relevance
+      label: "Edge AI / embedded"
+      max_pts: 10
+      description: "10=embedded/edge deployment required, 5=mentioned, 0=cloud-only"
+    - key: tracking_relevance
+      label: "Detection / tracking / segmentation"
+      max_pts: 15
+      description: "10=tracking/detection/segmentation core to the role, 5=mentioned, 0=not relevant"
+    - key: production_relevance
+      label: "Production deployment"
+      max_pts: 10
+      description: "10=production deployment experience required, 5=mentioned, 0=research only"
+    - key: geometry_relevance
+      label: "Geometry / 3D vision"
+      max_pts: 5
+      description: "10=3D geometry/camera calibration/registration/pose estimation core, 5=mentioned, 0=not relevant"
+    - key: robotics_relevance
+      label: "Robotics"
+      max_pts: 5
+      description: "10=robotics/robot perception mentioned prominently, 5=adjacent, 0=not relevant"
 
 search:
   max_results_per_board: 10

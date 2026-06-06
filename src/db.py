@@ -43,6 +43,7 @@ def init_db() -> None:
             job_id INTEGER REFERENCES jobs(id),
             selected_cv_angle TEXT,
             cv_draft_markdown TEXT,
+            cover_letter_draft TEXT,
             linkedin_message_draft TEXT,
             recruiter_email_draft TEXT,
             talking_points TEXT,
@@ -51,6 +52,11 @@ def init_db() -> None:
             last_action_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
+        # Migrate existing DBs: add cover_letter_draft if missing
+        try:
+            conn.execute("ALTER TABLE applications ADD COLUMN cover_letter_draft TEXT")
+        except Exception:
+            pass  # column already exists
 
 
 def insert_job(data: dict) -> int:

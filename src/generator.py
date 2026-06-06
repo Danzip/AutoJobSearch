@@ -65,6 +65,7 @@ def generate_application_content(
 
     return {
         "cv_draft_markdown": cv_draft,
+        "cover_letter":      data.get("cover_letter", ""),
         "linkedin_message":  data.get("linkedin_message", ""),
         "recruiter_email":   data.get("recruiter_email", ""),
         "talking_points":    data.get("talking_points", []),
