@@ -565,6 +565,8 @@ if __name__ == "__main__":
                         help="Skip search+scrape; load jobs from JSON file (e.g. data/all_scraped.json)")
     parser.add_argument("--skip-config-sync", action="store_true",
                         help="Skip auto-update of scoring config from candidate profile")
+    parser.add_argument("--no-cv-filter", action="store_true",
+                        help="Disable title-based CV signal filter; save all scraped jobs")
     args = parser.parse_args()
 
     if args.dry_run:
@@ -595,7 +597,7 @@ if __name__ == "__main__":
                 print(f"  SKIP (stale {posted})  {wd['title'][:55]}")
                 stale_count += 1
                 continue
-            if not _has_cv_signal(wd["title"], wd["description"]):
+            if not args.no_cv_filter and not _has_cv_signal(wd["title"], wd["description"]):
                 print(f"  SKIP (no CV signal)  {wd['title'][:55]}")
                 continue
             scraped.append({"url": wd["url"], "board": wd["board"],
@@ -632,7 +634,7 @@ if __name__ == "__main__":
                     stale_count += 1
                     continue
                 title = job.title or r["title"]
-                if not _has_cv_signal(title, job.description):
+                if not args.no_cv_filter and not _has_cv_signal(title, job.description):
                     print(f"  SKIP (no CV signal)  {title[:55]}")
                     continue
                 scraped.append({"url": r["url"], "board": r["board"],
@@ -652,7 +654,7 @@ if __name__ == "__main__":
                     stale_count += 1
                     continue
                 title = job.title or r["title"]
-                if not _has_cv_signal(title, job.description):
+                if not args.no_cv_filter and not _has_cv_signal(title, job.description):
                     print(f"  SKIP (no CV signal)  {title[:55]}")
                     continue
                 scraped.append({"url": r["url"], "board": r["board"],
