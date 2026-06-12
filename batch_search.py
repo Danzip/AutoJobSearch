@@ -25,6 +25,7 @@ from src.generator import generate_application_content
 from src.job_search import search_jobs, ALL_BOARDS
 from src.job_search_workday import search_workday_companies
 from src.job_search_comeet import search_comeet_companies
+from src.job_search_linkedin import search_linkedin_jobs
 from src.llm import get_analyze_llm, get_generate_llm, get_review_llm
 from src.referral_search import find_referral_targets, write_referral_targets_md
 from src.scorer import score_requirements
@@ -114,7 +115,9 @@ def run_batch(
         workday_direct = search_workday_companies(keywords, max_per_company=max_per_board)
         print("  Direct Comeet company search:")
         comeet_direct = search_comeet_companies(keywords)
-        print(f"  → {len(urls)} DDG + {len(workday_direct)} Workday + {len(comeet_direct)} Comeet direct\n")
+        print("  Direct LinkedIn search (JobSpy):")
+        linkedin_direct = search_linkedin_jobs(keywords)
+        print(f"  → {len(urls)} DDG + {len(workday_direct)} Workday + {len(comeet_direct)} Comeet + {len(linkedin_direct)} LinkedIn direct\n")
 
         _step(2, 4, "Fetching job descriptions")
         from src.scrapers.date_utils import is_stale
@@ -149,6 +152,12 @@ def run_batch(
             if cd["url"] not in seen_urls:
                 urls.append({"url": cd["url"], "board": "Comeet",
                              "title": cd["title"], "company": cd["company"]})
+
+        # Merge LinkedIn direct URLs into the scrape queue (descriptions fetched by LinkedInScraper)
+        for ld in linkedin_direct:
+            if ld["url"] not in seen_urls:
+                urls.append({"url": ld["url"], "board": "LinkedIn",
+                             "title": ld["title"], "company": ld["company"]})
 
         pending = [r for r in urls if r["url"] not in seen_urls]
         for r in pending:
@@ -581,6 +590,8 @@ if __name__ == "__main__":
         workday_direct = search_workday_companies(args.keywords, max_per_company=args.max_per_board)
         print("  Direct Comeet company search:")
         comeet_direct = search_comeet_companies(args.keywords)
+        print("  Direct LinkedIn search (JobSpy):")
+        linkedin_direct = search_linkedin_jobs(args.keywords)
 
         from src.scrapers.date_utils import is_stale
         max_age = load_config().get("search", {}).get("max_job_age_days", 180)
@@ -611,6 +622,12 @@ if __name__ == "__main__":
             if cd["url"] not in seen_urls:
                 urls.append({"url": cd["url"], "board": "Comeet",
                              "title": cd["title"], "company": cd["company"]})
+
+        # Add LinkedIn direct URLs to scrape queue (descriptions fetched by LinkedInScraper)
+        for ld in linkedin_direct:
+            if ld["url"] not in seen_urls:
+                urls.append({"url": ld["url"], "board": "LinkedIn",
+                             "title": ld["title"], "company": ld["company"]})
 
         pending = [r for r in urls if r["url"] not in seen_urls]
         for r in pending:
