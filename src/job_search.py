@@ -7,6 +7,7 @@ SEARCH_TEMPLATES: dict[str, str] = {
     "Comeet":         'site:comeet.com/jobs "{keywords}" "israel"',
     "LinkedIn_jobs":  'site:linkedin.com/jobs/view "{keywords}" "tel aviv"',
     "LinkedIn_posts": 'site:linkedin.com/posts "{keywords}" "hiring" "israel"',
+    "ML_Israel":      'site:machinelearning.co.il/job {keywords}',
 }
 
 ALL_BOARDS = list(SEARCH_TEMPLATES.keys())
