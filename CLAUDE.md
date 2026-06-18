@@ -67,6 +67,8 @@ Single-file Streamlit app (`app.py`) with page routing via `st.session_state.pag
 
 **Never modify the scoring weights without updating tests.** The weights in `src/scorer.py` are designed to sum to 100 at maximum; changing one changes the scale.
 
+**When generating CVs manually (as Claude Code):** always read all `.docx` files in `input/` first (glob `input/*.docx`). They contain full story narratives, framing caveats, and interview defensibility notes that the yaml summaries omit. The pipeline loads them automatically via `_load_story_reference()` in `src/prompts.py`.
+
 ## Batch Pipeline
 
 ```bash
@@ -79,13 +81,29 @@ python batch_search.py --keywords "perception engineer israel" --top-n 5
 python batch_search.py --boards Comeet Greenhouse --max-per-board 15
 ```
 
-Output goes to `outputs/YYYY-MM-DD_HHmm_batch/`:
-- `SUMMARY.md` - stats + ranked table of all analyzed jobs
-- `NN_Company_Title/description.md` - full job description + original URL
-- `NN_Company_Title/cv.md` - tailored CV draft, LinkedIn message, recruiter email, talking points
-- `NN_Company_Title/summary.md` - score breakdown, match reasons, concerns, clarifying questions
+Output goes to `outputs/scraped/Company_Title/` (flat, no per-run batch folders, no rank prefix):
+- `description.md` - full job description + original URL
+- `cv.md` - tailored CV draft, LinkedIn message, recruiter email, talking points
+- `summary.md` - score breakdown, match reasons, concerns, clarifying questions
 
 All top-N jobs are also saved to SQLite so they appear in the Streamlit UI.
+
+## Output Status Tracking
+
+`outputs/` has three top-level status folders instead of per-run batch folders:
+- `outputs/scraped/` - found and scored, no decision made yet
+- `outputs/interesting/` - user wants to apply, not yet applied
+- `outputs/applied/` - application submitted
+
+A job folder lives in exactly one of these at a time. When the user says they applied to a job
+(e.g. "I applied to X via LinkedIn" or "applied to X, a friend referred me"):
+1. Move that job's folder from `scraped/` or `interesting/` into `outputs/applied/`
+2. Append a line to its `summary.md`: `**Applied:** <date> via <channel>`
+3. Update the job's `status` to `applied` in the DB (use `wsl -d Ubuntu -e python3 -c "..."` against
+   `data/jobs.sqlite` if running from Windows-side Claude Code - direct cross-filesystem access can
+   hit false "database is locked" errors)
+
+Do not invent a date or channel if the user doesn't give one - ask, or leave the annotation generic.
 
 ## Clarifying Questions Workflow
 
@@ -165,15 +183,23 @@ scraping:
 - Company name extracted from URL slug, not DOM (DOM shows "All Jobs" navigation noise)
 - Closed/redirect jobs detected by `len(description) < 200` (not by DOM element presence)
 
-## CV Writing Rules (enforced in every generated CV)
+## CV Generation System Prompt
 
-These live in `src/prompts.py` GENERATOR_SYSTEM and are injected into every LLM generation call:
+The full generation prompt strategy is in **`GENERATOR_PROMPT.md`** (root). That file is the reference spec.
+The actual system prompt injected into every LLM generation call lives in `src/prompts.py` → `GENERATOR_SYSTEM`.
+**Keep both in sync when making changes.**
+
+Key rules enforced in every generated CV:
 
 1. **No em dashes** - use commas, colons, or plain hyphens. Never the "—" character.
-2. **One page in spirit** - max 5-6 tight bullet points. No preamble sentence, no padding.
-3. **Mirror JD buzzwords** - use the job description's exact terminology where it accurately describes the candidate's experience (e.g. "real-time inference", "edge deployment", "model compression", "perception pipeline"). Do not paraphrase away from JD language.
+2. **One page strict** - max 3 bullets per role (4 for most recent only if essential). Cut ruthlessly.
+3. **Mirror JD buzzwords** - use the job description's exact terminology where it accurately describes the candidate's experience. Do not paraphrase away from JD language.
 4. **Exact metrics** - 0.321 AP50:95, 20 FPS, 80 MB, 100x speedup. Never rounded or changed.
 5. **Stories only** - every bullet must trace to a story in `profile/candidate_profile.yaml`. No invented claims.
+6. **ATS-first** - surface critical JD keywords naturally; every keyword must be defensible in a technical interview.
+7. **No AI language** - no "passionate", "leveraged", "utilized", "results-driven", "cutting-edge", "Furthermore".
+8. **Interview defensibility** - every major claim must survive a senior technical interview; weaken or remove if not.
+9. **CV format** - always include SUMMARY paragraph tailored to the role + categorized TECHNICAL SKILLS section (see `GENERATOR_PROMPT.md` for exact format).
 
 ## Hard Rules - Never Violate
 

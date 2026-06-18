@@ -8,7 +8,7 @@ Descriptions are NOT included here — they're fetched by LinkedInScraper.
 def search_linkedin_jobs(
     keywords: str,
     location: str = "Israel",
-    results_wanted: int = 15,
+    results_wanted: int = 25,
     hours_old: int = 168,
 ) -> list[dict]:
     """

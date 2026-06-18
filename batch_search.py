@@ -44,7 +44,10 @@ _CV_SIGNAL_KEYWORDS = [
     "computer vision", "deep learning", "machine learning",
     "neural network", "object detection", "image processing",
     "algorithm", "perception", "cv engineer", "dl engineer",
-    "image quality", "image sensor",
+    "image quality", "image sensor", "ai engineer", "ai researcher",
+    "ai developer", "ml engineer", "vision", "imaging", "robotics",
+    "autonomous", "data scientist", "artificial intelligence", "ai/ml",
+    "ml/cv", "ai scientist",
 ]
 
 def _has_cv_signal(title: str, description: str = "") -> bool:
@@ -58,7 +61,7 @@ def _has_cv_signal(title: str, description: str = "") -> bool:
 def run_batch(
     keywords: str = "computer vision engineer israel",
     boards: list = None,
-    max_per_board: int = 10,
+    max_per_board: int = 20,
     top_n: int = 10,
     skip_config_sync: bool = False,
     from_json: Path = None,
@@ -77,7 +80,7 @@ def run_batch(
     if boards is None:
         boards = ALL_BOARDS
 
-    out_dir = Path("outputs") / datetime.now().strftime("%Y-%m-%d_%H%M_batch")
+    out_dir = Path("outputs") / "scraped"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     _banner("AUTOJOBAPPLY BATCH RUN")
@@ -269,16 +272,23 @@ def run_batch(
     print(f"  Average score:         {avg_all:.0f}/100")
     print(f"{'─'*60}\n")
 
+    # ── 4a. Write description.md for ALL analyzed jobs (full JD always saved) ───
+    print(f"Saving full JDs for all {len(analyzed)} analyzed jobs...")
+    for rank, job in enumerate(analyzed, 1):
+        dir_name = f"{slugify(job['company'])}_{slugify(job['title'])}"
+        job_dir = out_dir / dir_name
+        job_dir.mkdir(exist_ok=True)
+        _write_description(job_dir, job)
+
     if not top:
         print("No jobs scored above 60. Exiting.")
         return out_dir
 
-    # ── 4. Generate CVs for top N (score ≥ 60 only) ──────────────────────────
+    # ── 4b. Generate CVs for top N (score ≥ 60 only) ─────────────────────────
     _step(4, 5, f"Generating CVs for {len(top)} jobs (score ≥ 60)")
     for rank, job in enumerate(top, 1):
-        dir_name = f"{rank:02d}_{slugify(job['company'])}_{slugify(job['title'])}"
-        job_dir = out_dir / dir_name
-        job_dir.mkdir(exist_ok=True)
+        dir_name = f"{slugify(job['company'])}_{slugify(job['title'])}"
+        job_dir = out_dir / dir_name  # already created in 4a
 
         # Persist to DB so the Streamlit app shows these too
         job_id = _save_to_db(job)
@@ -308,8 +318,6 @@ def run_batch(
         })
         db.update_job(job_id, status="cv_generated")
 
-        # Write files
-        _write_description(job_dir, job)
         _write_cv(job_dir, job, content)
         _write_summary(job_dir, rank, job, content, generate_llm)
 
@@ -319,7 +327,7 @@ def run_batch(
     # ── 5. Referral search for score ≥ 60 jobs only ──────────────────────────
     _step(5, 5, f"Searching referral targets for {len(top)} jobs (score ≥ 60)")
     for rank, job in enumerate(top, 1):
-        dir_name = f"{rank:02d}_{slugify(job['company'])}_{slugify(job['title'])}"
+        dir_name = f"{slugify(job['company'])}_{slugify(job['title'])}"
         job_dir = out_dir / dir_name
         targets = find_referral_targets(job["company"])
         write_referral_targets_md(job_dir, job, targets)
@@ -564,7 +572,7 @@ if __name__ == "__main__":
                         help="Search keywords")
     parser.add_argument("--boards", nargs="*", default=ALL_BOARDS,
                         choices=ALL_BOARDS, help="Boards to search")
-    parser.add_argument("--max-per-board", type=int, default=10,
+    parser.add_argument("--max-per-board", type=int, default=20,
                         help="Max results per board")
     parser.add_argument("--top-n", type=int, default=10,
                         help="Number of CVs to generate")
