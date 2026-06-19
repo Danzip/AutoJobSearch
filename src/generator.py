@@ -71,7 +71,19 @@ def generate_application_content(
         "talking_points":    data.get("talking_points", []),
     }
     _fix_em_dashes(content)
+    _warn_missing_employers(content)
     return content
+
+
+def _warn_missing_employers(content: dict) -> None:
+    """Warn if the generated CV silently dropped an entire employer (an unexplained gap)."""
+    from src.cv_validator import missing_employers
+    cv_draft = content.get("cv_draft_markdown", "")
+    if not cv_draft:
+        return
+    missing = missing_employers(cv_draft)
+    if missing:
+        print(f"  WARN  CV is missing employer(s), leaving an unexplained gap: {', '.join(missing)}")
 
 
 def _fix_em_dashes(content: dict) -> None:
