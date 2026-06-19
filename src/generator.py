@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 from src.llm import LLMProvider
-from src.prompts import GENERATOR_SYSTEM, generator_prompt
+from src.prompts import generator_prompt, get_generator_system
 from src.utils import extract_json_from_text, load_config, load_profile_notes
 
 
@@ -54,7 +54,7 @@ def generate_application_content(
         trimmed_profile["_extra_notes"] = notes
 
     prompt = generator_prompt(job, requirements, trimmed_profile, cv_angle)
-    raw = llm.complete(prompt, system=GENERATOR_SYSTEM, call_type="generate")
+    raw = llm.complete(prompt, system=get_generator_system(), call_type="generate")
     data = extract_json_from_text(raw)
 
     cv_draft = data.get("cv_draft_markdown", "")

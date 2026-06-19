@@ -56,6 +56,7 @@ Single-file Streamlit app (`app.py`) with page routing via `st.session_state.pag
 | `src/generator.py` | LLM call to generate CV draft, LinkedIn, email, talking points |
 | `src/llm.py` | `LLMProvider` ABC; Anthropic (with prompt caching) + OpenAI impls |
 | `src/prompts.py` | All prompt templates - edit here to tune LLM behavior |
+| `src/pdf_generator.py` | Renders `cv_draft_markdown` to a one-page `cv.pdf` (markdown → HTML → weasyprint) |
 | `src/scrapers/` | One scraper per job board; `base.py` dispatches by URL |
 | `src/job_search.py` | DuckDuckGo site: queries for job discovery |
 | `profile/candidate_profile.yaml` | Source of truth - stories with tags, skills, hard limits, key metrics |
@@ -67,7 +68,7 @@ Single-file Streamlit app (`app.py`) with page routing via `st.session_state.pag
 
 **Never modify the scoring weights without updating tests.** The weights in `src/scorer.py` are designed to sum to 100 at maximum; changing one changes the scale.
 
-**When generating CVs manually (as Claude Code):** always read all `.docx` files in `input/` first (glob `input/*.docx`). They contain full story narratives, framing caveats, and interview defensibility notes that the yaml summaries omit. The pipeline loads them automatically via `_load_story_reference()` in `src/prompts.py`.
+**When generating CVs manually (as Claude Code):** always read all `.docx` files in `input/` first (glob `input/*.docx`). They contain full story narratives, framing caveats, and interview defensibility notes that the yaml summaries omit. The pipeline loads them automatically via `_load_story_reference()` in `src/prompts.py`, combined into the cached system prompt by `get_generator_system()` (see Token Cost Mitigation below).
 
 ## Batch Pipeline
 
@@ -84,6 +85,7 @@ python batch_search.py --boards Comeet Greenhouse --max-per-board 15
 Output goes to `outputs/scraped/Company_Title/` (flat, no per-run batch folders, no rank prefix):
 - `description.md` - full job description + original URL
 - `cv.md` - tailored CV draft, LinkedIn message, recruiter email, talking points
+- `cv.pdf` - the CV draft only, rendered to a styled one-page PDF via `src/pdf_generator.py` (written automatically by `_write_cv()` in `batch_search.py` right after `cv.md`)
 - `summary.md` - score breakdown, match reasons, concerns, clarifying questions
 
 All top-N jobs are also saved to SQLite so they appear in the Streamlit UI.
@@ -146,7 +148,8 @@ All techniques are active. Estimated cost per 24-job batch: **~$0.07**.
 | **Anthropic Batch API** | `batch_analyze()` in `analyzer.py` | 50% off all analysis tokens |
 | **Haiku for analysis** | `get_analyze_llm()` in `llm.py` | ~10x cheaper than Sonnet |
 | **Prompt caching** | `cache_control` on system block in both providers | ~90% off repeated system tokens |
-| **Story selection** | `_select_stories()` in `generator.py` | Sends 6 of 18 stories → ~60% fewer prompt tokens |
+| **Docx story reference in the cached system prompt** | `get_generator_system()` in `prompts.py` | The full `input/*.docx` text (~6,300 tokens) is appended to the cached system block instead of the per-job user prompt, so it's billed once per batch (cache write) instead of in full on every generation call |
+| **Story selection** | `_select_stories()` in `generator.py` | Picks 6 of ~18 yaml stories for the per-job "SELECTED STORIES" summary (cheap either way - it's the docx caching above that matters for token cost) |
 | **Description truncation** | `_truncate()` in `analyzer.py` | Caps at `max_description_chars` (default 4000) |
 
 Tune in `config.yaml`:

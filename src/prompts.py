@@ -100,6 +100,26 @@ INTERVIEW DEFENSIBILITY: For every major claim ask "Could the candidate confiden
 Return ONLY valid JSON. No markdown code fences, no preamble."""
 
 
+def get_generator_system() -> str:
+    """
+    GENERATOR_SYSTEM plus the docx master story reference, combined into one string.
+    Anthropic's prompt cache only caches an exact prefix of the `system` block, so the
+    (large, identical-across-jobs) docx text must live here rather than in the per-job
+    user prompt to actually get cached instead of being billed in full on every call.
+    """
+    story_reference = _load_story_reference()
+    if not story_reference:
+        return GENERATOR_SYSTEM
+    return f"""{GENERATOR_SYSTEM}
+
+MASTER STORY REFERENCE (from input/*.docx):
+This document contains the full narrative, framing notes, and nuances for every story.
+Use it as the authoritative source for HOW to frame each experience. The per-job SELECTED STORIES
+list below is a structured, pre-filtered summary - this document has the full depth, framing
+caveats, and interview defensibility notes.
+{story_reference}"""
+
+
 REVIEWER_SYSTEM = (
     "You are a CV reviewer. "
     "Your job is to improve CV bullets to better match a specific job description. "
@@ -170,15 +190,6 @@ def generator_prompt(job: dict, requirements: dict, profile: dict, cv_angle: str
         f"- Location: {personal.get('location', '')}"
     )
 
-    story_reference = _load_story_reference()
-    story_reference_block = f"""
-MASTER STORY REFERENCE (from input/*.docx):
-This document contains the full narrative, framing notes, and nuances for every story.
-Use it as the authoritative source for HOW to frame each experience. The yaml stories above
-are a structured summary — this document has the full depth, framing caveats, and interview defensibility notes.
-{story_reference}
-""" if story_reference else ""
-
     return f"""Generate tailored job application content for {personal.get('name', 'the candidate')}.
 
 CANDIDATE:
@@ -189,7 +200,7 @@ KEY METRICS (use these exact numbers - do not round or change):
 
 SELECTED STORIES (pre-filtered by relevance to this role):
 {stories_text}
-{story_reference_block}
+
 SKILLS: {skills_text}
 
 HARD LIMITS - NEVER CLAIM THESE IN ANY OUTPUT:

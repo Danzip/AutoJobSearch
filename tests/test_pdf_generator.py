@@ -4,68 +4,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.pdf_generator import (
-    _score_bullet,
-    _cut_weakest_bullet,
     _count_pdf_pages,
+    _extract_cv_section,
     _CSS_SHRINK_OVERRIDES,
-    _extract_tailored_bullets,
+    generate_cv_pdf,
 )
-
-
-# ── Bullet scoring ─────────────────────────────────────────────────────────────
-
-def test_score_bullet_counts_matches():
-    bullet = "INT8 quantization and ONNX export pipeline"
-    assert _score_bullet(bullet, ["INT8", "ONNX", "quantization", "TensorRT"]) == 3
-
-
-def test_score_bullet_case_insensitive():
-    assert _score_bullet("PyTorch training loop", ["pytorch"]) == 1
-
-
-def test_score_bullet_no_keywords():
-    assert _score_bullet("some bullet", []) == 0
-
-
-def test_score_bullet_no_match():
-    assert _score_bullet("edge deployment pipeline", ["SLAM", "ROS2", "LiDAR"]) == 0
-
-
-def test_score_bullet_partial_substring():
-    # "quantize" should NOT match "quantization" as a whole word, but substring match is fine
-    # The implementation uses substring matching for simplicity
-    score = _score_bullet("model quantize step", ["quantization"])
-    assert isinstance(score, int)  # just verify it returns int, not crash
-
-
-# ── Bullet cutting ─────────────────────────────────────────────────────────────
-
-def test_cut_weakest_removes_lowest_scorer():
-    bullets = [
-        "INT8 quantization and ONNX export",     # score 2
-        "general soft skills and communication", # score 0
-        "ONNX model compression pipeline",       # score 1
-    ]
-    keywords = ["INT8", "ONNX", "quantization"]
-    result = _cut_weakest_bullet(bullets, keywords)
-    assert len(result) == 2
-    assert "general soft skills and communication" not in result
-
-
-def test_cut_weakest_preserves_single_bullet():
-    assert _cut_weakest_bullet(["only bullet"], ["kw"]) == ["only bullet"]
-
-
-def test_cut_weakest_preserves_empty_list():
-    assert _cut_weakest_bullet([], ["kw"]) == []
-
-
-def test_cut_weakest_all_equal_removes_last():
-    bullets = ["bullet a", "bullet b", "bullet c"]
-    result = _cut_weakest_bullet(bullets, ["xyz"])  # no matches → all score 0
-    assert len(result) == 2
-    # Last one should be removed when all tied
-    assert "bullet c" not in result
 
 
 # ── CSS shrink overrides ───────────────────────────────────────────────────────
@@ -86,9 +29,8 @@ def test_shrink_overrides_has_at_least_3_levels():
 # ── Page count ─────────────────────────────────────────────────────────────────
 
 def test_count_pdf_pages_real_file(tmp_path):
-    """Generate a minimal PDF and verify page count detection works."""
     try:
-        from weasyprint import HTML, CSS
+        from weasyprint import HTML
         html = "<html><body><p>Hello</p></body></html>"
         pdf_path = tmp_path / "test.pdf"
         HTML(string=html).write_pdf(str(pdf_path))
@@ -104,34 +46,65 @@ def test_count_pdf_pages_missing_file_raises(tmp_path):
         _count_pdf_pages(tmp_path / "nonexistent.pdf")
 
 
-# ── Extract bullets ────────────────────────────────────────────────────────────
+# ── Extract CV section from cv.md ───────────────────────────────────────────────
 
-def test_extract_tailored_bullets_from_cv_md(tmp_path):
-    md = """# CV Draft
+def test_extract_cv_section_pulls_text_between_first_two_dividers():
+    md = """# CV Draft — Acme / Engineer
+
 **Angle:** Edge AI
 **Score:** 88/100
 
 ---
 
-## Tailored Highlights
+# Daniel Ziv
+The actual CV body.
 
-- First bullet point
-- Second bullet point
-- Third bullet
+---
 
 ## LinkedIn Message
 
 Some message here.
 """
-    md_path = tmp_path / "cv.md"
-    md_path.write_text(md)
-    bullets = _extract_tailored_bullets(md_path.read_text())
-    assert len(bullets) == 3
-    assert bullets[0] == "First bullet point"
-    assert bullets[2] == "Third bullet"
+    section = _extract_cv_section(md)
+    assert section.startswith("# Daniel Ziv")
+    assert "The actual CV body." in section
+    assert "LinkedIn Message" not in section
 
 
-def test_extract_tailored_bullets_returns_empty_when_no_section(tmp_path):
-    md = "# CV Draft\n\nNo highlights section here.\n"
-    bullets = _extract_tailored_bullets(md)
-    assert bullets == []
+def test_extract_cv_section_returns_whole_text_when_no_dividers():
+    md = "# Daniel Ziv\nNo dividers here.\n"
+    assert _extract_cv_section(md) == md.strip()
+
+
+# ── PDF generation from real markdown ───────────────────────────────────────────
+
+def test_generate_cv_pdf_produces_one_page(tmp_path):
+    try:
+        import weasyprint  # noqa: F401
+    except ImportError:
+        import pytest
+        pytest.skip("weasyprint not installed")
+
+    cv_markdown = """# Daniel Ziv - Computer Vision Engineer
+dziv94@gmail.com | Tel Aviv
+
+## SUMMARY
+Computer vision engineer with experience in real-time detection and tracking.
+
+## EXPERIENCE
+
+**Acme Corp** | *Engineer*   2021-2023 | Israel
+- Built a thing
+- Built another thing
+
+## EDUCATION
+B.Sc. Electrical Engineering | Tel Aviv University   2013-2017
+
+## TECHNICAL SKILLS
+**Computer Vision:** Object detection, tracking
+"""
+    out_pdf = tmp_path / "cv.pdf"
+    result = generate_cv_pdf(cv_markdown, out_pdf)
+    assert result == out_pdf
+    assert out_pdf.exists()
+    assert _count_pdf_pages(out_pdf) == 1

@@ -338,11 +338,6 @@ def run_batch(
     # Overall summary (all analyzed jobs, top = qualified ≥60 subset)
     _write_overall_summary(out_dir, keywords, boards, len(urls), analyzed, top)
 
-    # Generate PDFs for all top-N CVs
-    print("Generating PDFs...")
-    from src.pdf_generator import batch_dir_to_pdf
-    batch_dir_to_pdf(out_dir, profile)
-
     _banner("DONE")
     print(f"Output directory : {out_dir}/")
     print(f"Files per job    : description.md  cv.md  cover_letter.md  cv.pdf  summary.md  referral_targets.md")
@@ -408,6 +403,13 @@ def _write_cv(job_dir: Path, job: dict, content: dict):
 
 {content['cover_letter']}
 """)
+
+    if content.get("cv_draft_markdown"):
+        from src.pdf_generator import generate_cv_pdf
+        try:
+            generate_cv_pdf(content["cv_draft_markdown"], job_dir / "cv.pdf")
+        except Exception as exc:
+            print(f"  WARN  cv.pdf generation failed for {job['company']}: {exc}")
 
 
 def _write_summary(job_dir: Path, rank: int, job: dict, content: dict, llm):
