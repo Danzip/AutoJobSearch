@@ -48,7 +48,8 @@ def test_count_pdf_pages_missing_file_raises(tmp_path):
 
 # ── Extract CV section from cv.md ───────────────────────────────────────────────
 
-def test_extract_cv_section_pulls_text_between_first_two_dividers():
+def test_extract_cv_section_strips_header_in_new_format():
+    """Current _write_cv() format: '# CV Draft' header + Angle/Score, then '---', then the real CV."""
     md = """# CV Draft — Acme / Engineer
 
 **Angle:** Edge AI
@@ -57,7 +58,7 @@ def test_extract_cv_section_pulls_text_between_first_two_dividers():
 ---
 
 # Daniel Ziv
-The actual CV body.
+The actual CV body, including Razor Labs experience.
 
 ---
 
@@ -67,12 +68,30 @@ Some message here.
 """
     section = _extract_cv_section(md)
     assert section.startswith("# Daniel Ziv")
-    assert "The actual CV body." in section
+    assert "Razor Labs" in section
+    assert "LinkedIn Message" not in section
+    assert "CV Draft" not in section
+
+
+def test_extract_cv_section_handles_old_format_with_no_header():
+    """Older cv.md files have no '# CV Draft' header - the CV starts at line 1."""
+    md = """# Daniel Ziv
+The actual CV body, including Razor Labs experience.
+
+---
+
+## LinkedIn Message
+
+Some message here.
+"""
+    section = _extract_cv_section(md)
+    assert section.startswith("# Daniel Ziv")
+    assert "Razor Labs" in section
     assert "LinkedIn Message" not in section
 
 
-def test_extract_cv_section_returns_whole_text_when_no_dividers():
-    md = "# Daniel Ziv\nNo dividers here.\n"
+def test_extract_cv_section_returns_whole_text_when_no_linkedin_section():
+    md = "# Daniel Ziv\nNo LinkedIn section here, just the CV.\n"
     assert _extract_cv_section(md) == md.strip()
 
 

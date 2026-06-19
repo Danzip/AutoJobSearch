@@ -4,6 +4,7 @@ one-page PDF via markdown -> HTML -> weasyprint.
 PyMuPDF (fitz) is used for page-count verification after rendering.
 """
 
+import re
 from pathlib import Path
 
 
@@ -81,12 +82,16 @@ def _count_pdf_pages(pdf_path: Path) -> int:
 
 def _extract_cv_section(cv_md_text: str) -> str:
     """
-    Pull the actual CV draft out of a cv.md file. _write_cv() in batch_search.py
-    writes: header metadata, '---', the actual cv_draft_markdown, '---', LinkedIn/email/
-    talking points. The CV is the text between the first and second '---'.
+    Pull the actual CV draft out of a cv.md file. Current files written by _write_cv()
+    have a "# CV Draft - ..." header with Angle/Score metadata, then '---', then the
+    real CV; older files have no header and start directly with the real CV. Both
+    formats end the CV right before a '## LinkedIn Message' heading.
     """
-    parts = cv_md_text.split("\n---\n")
-    return parts[1].strip() if len(parts) > 1 else cv_md_text.strip()
+    cv_part = cv_md_text.split("\n## LinkedIn Message")[0]
+    if cv_part.lstrip().startswith("# CV Draft") and "\n---\n" in cv_part:
+        cv_part = cv_part.split("\n---\n", 1)[1]
+    cv_part = re.sub(r"\n-{3,}\s*$", "", cv_part)
+    return cv_part.strip()
 
 
 def generate_cv_pdf(cv_draft_markdown: str, output_path: Path, max_rounds: int = 3) -> Path:
