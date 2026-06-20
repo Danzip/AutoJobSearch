@@ -79,12 +79,39 @@ ATS & KEYWORD STRATEGY:
 
 ONE PAGE STRICT: The entire CV must fit on one page. Max 3 bullets per role (4 for the most recent if essential). Cut ruthlessly - a shorter, punchy CV beats a long one every time.
 
-CV FORMAT (match candidate's reference CV structure):
-- Name + subtitle + contact header
-- SUMMARY: 2-3 sentences tailored to this specific role, lead with most relevant experience
-- EXPERIENCE: 3 bullets per role max, most relevant first, one page total
-- EDUCATION: degree, institution, GPA, relevant coursework/project
-- TECHNICAL SKILLS: categorized (Algorithms, Image Processing, Deep Learning, Data Science, Languages & Tools)
+CV FORMAT - use this exact markdown structure (the PDF renderer styles it to match the candidate's reference CV):
+
+# Daniel Ziv
+[Role title tailored to this job - plain text, no markdown prefix]
+dziv94@gmail.com · +972 54 461 4839 · Tel Aviv · linkedin.com/in/dziv
+
+## SUMMARY
+[2-3 sentences tailored to this role. Lead with most relevant experience. No filler.]
+
+## EXPERIENCE
+
+**[Job Title]** · [Company Name], [City]
+[Start Year] – [End Year or Present]
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## EDUCATION
+**B.Sc. Electrical Engineering** · Tel Aviv University · GPA 85 · 2013–2017 | Focus: Computer Vision, Image Processing, Algorithms & Data Structures | Final Project: Pericyte Segmentation: 100/100
+
+## TECHNICAL SKILLS
+**[Category]:** item, item, item
+**[Category]:** item, item, item
+
+CRITICAL FORMAT RULES:
+- h1 line: ONLY "Daniel Ziv" - no role, no dash, just the name
+- Line 2: subtitle role title - plain text, no ## or ** prefix
+- Line 3: contact info with · (middle dot) NOT | (pipe)
+- Section headers (##): ALL CAPS exactly as shown
+- Role lines: **Bold Title** · Company, Location (bold title, then middle dot, then company/city)
+- Date line: immediately after role line, plain text, format: YYYY – YYYY or YYYY – Present
+- Skills section: **Bold Category:** comma-separated items (NO bullet points in skills)
+- NEVER use ### (h3 headers) anywhere in the CV
 
 WRITING RULES - ABSOLUTE:
 - NO em dashes (—) anywhere - use commas, colons, or hyphens
@@ -236,4 +263,103 @@ Return this exact JSON:
     "linkedin_message": "3-4 sentences. Casual but professional. Reference specific role and one concrete technical fact. No em dashes.",
     "recruiter_email": "Start with 'Subject: ...' then blank line then body. 4-5 sentences. Professional but direct. No em dashes.",
     "talking_points": ["specific point from real experience", "point 2", "point 3", "point 4", "point 5"]
+}}"""
+
+
+def _build_profile_block(profile: dict) -> str:
+    """Shared helper: render profile fields into a prompt-ready string."""
+    personal = profile.get("personal", {})
+    key_metrics = profile.get("key_metrics", [])
+    hard_limits = profile.get("hard_limits", [])
+    stories = profile.get("stories", [])
+    skills = profile.get("skills", {})
+
+    edu = personal.get("education", {})
+    candidate_summary = (
+        f"- {personal.get('years_experience', '')}+ years experience\n"
+        f"- {edu.get('degree', '')} from {edu.get('institution', '')}\n"
+        f"- Location: {personal.get('location', '')}"
+    )
+    stories_text = "\n\n".join(
+        f"[{s['id']}] {s['headline']}\n{s.get('body', '').strip()}"
+        for s in stories
+    )
+    return (
+        f"CANDIDATE:\n{candidate_summary}\n\n"
+        f"KEY METRICS (exact numbers - never round or change):\n" +
+        "\n".join(f"- {m}" for m in key_metrics) +
+        f"\n\nSTORIES:\n{stories_text}\n\n"
+        f"SKILLS: {yaml.dump(skills, default_flow_style=True, allow_unicode=True)}\n"
+        f"HARD LIMITS - NEVER CLAIM:\n" +
+        "\n".join(f"- {h}" for h in hard_limits)
+    )
+
+
+def comprehensive_cv_prompt(job: dict, requirements: dict, profile: dict, cv_angle: str) -> str:
+    """Pass 1: Dump ALL relevant stories into a comprehensive draft. No page limit."""
+    jd = job.get("description", "")[:4000]
+    profile_block = _build_profile_block(profile)
+
+    return f"""COMPREHENSIVE CV DRAFT - PASS 1 (no page limit)
+
+{profile_block}
+
+TARGET JOB:
+Company: {job.get('company', 'Unknown')}
+Title: {job.get('title', 'Unknown')}
+Location: {job.get('location', '')}
+Required skills: {', '.join(requirements.get('required_skills', []))}
+Domains: {', '.join(requirements.get('domains', []))}
+Seniority: {requirements.get('seniority', 'unknown')}
+
+CV ANGLE: {cv_angle}
+
+JOB DESCRIPTION:
+{jd}
+
+TASK: Write a comprehensive CV that covers every relevant story. Do NOT limit yourself - length is not a concern here. This draft will be compressed to one page in the next pass.
+
+1. Go through every required skill in the JD one by one. For each, find a matching story and plan to include it.
+2. Write 4-6 bullets per role. Include every story that has any relevance to this JD.
+3. Use the correct markdown structure (# name, plain subtitle, contact with ·, ## CAPS section headers, **Role** · Company date-on-next-line format, **Category:** skills).
+
+Do not pre-censor - include all relevant content. The compression pass will select the strongest bullets.
+
+Return ONLY valid JSON:
+{{"cv_draft_comprehensive": "full comprehensive CV in correct markdown structure, 4-6 bullets per role"}}"""
+
+
+def compress_and_package_prompt(job: dict, requirements: dict, comprehensive_draft: str, cv_angle: str) -> str:
+    """Pass 2: Compress comprehensive draft to 1 dense page and generate full application package."""
+    jd = job.get("description", "")[:3000]
+
+    return f"""COMPRESS TO ONE DENSE PAGE + GENERATE FULL APPLICATION PACKAGE
+
+JOB: {job.get('title', '')} at {job.get('company', '')}
+CV ANGLE: {cv_angle}
+
+JOB DESCRIPTION (for keyword matching):
+{jd}
+
+COMPREHENSIVE CV DRAFT:
+{comprehensive_draft}
+
+TASK 1 - COMPRESS:
+From the draft above, select the strongest 3 bullets per role (4 for the most recent role only if essential).
+- Prioritize: exact metrics, production impact, JD keyword coverage
+- The final page must be DENSE - aim to fill 90%+ of the space, no white space at the bottom
+- Keep ALL sections: SUMMARY, every EXPERIENCE role, EDUCATION, TECHNICAL SKILLS
+- Preserve the exact markdown structure: # name / plain subtitle / contact with · / ## CAPS headers / **Role** · Company / plain date line / **Category:** skills
+- No em dashes, no bracket placeholders
+
+TASK 2 - APPLICATION MATERIALS:
+Generate the rest of the package based on the compressed CV.
+
+Return ONLY valid JSON:
+{{
+    "cv_draft_markdown": "compressed one-page CV in correct markdown structure",
+    "cover_letter": "4 paragraphs ~280 words. Para 1: specific hook (not generic enthusiasm). Para 2: strongest achievement with exact metric. Para 3: second achievement and why it matters. Para 4: what candidate brings + call to action. No em dashes.",
+    "linkedin_message": "3-4 sentences. Casual but professional. One concrete technical fact. No em dashes. Under 300 chars ideally.",
+    "recruiter_email": "Start with 'Subject: ...' then blank line then 4-5 sentence body. Professional but direct. No em dashes.",
+    "talking_points": ["strongest story mapped to this role's top requirement", "second strongest mapping", "how to handle the biggest gap", "non-obvious domain connection", "good question to ask the interviewer"]
 }}"""

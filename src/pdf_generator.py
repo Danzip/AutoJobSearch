@@ -12,9 +12,9 @@ from pathlib import Path
 # Level 0 = no change; level 1+ progressively reduce margins and font sizes.
 _CSS_SHRINK_OVERRIDES = [
     "",
-    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } li { font-size: 8.8pt; }",
-    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } li { font-size: 8.4pt; }",
-    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } li { font-size: 8.0pt; }",
+    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } li { font-size: 8.8pt; } h1 { font-size: 20pt; }",
+    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } li { font-size: 8.4pt; } h1 { font-size: 19pt; }",
+    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } li { font-size: 8.0pt; } h1 { font-size: 18pt; }",
 ]
 
 
@@ -32,35 +32,57 @@ body {
     margin: 0;
 }
 
+/* Name - large and prominent */
 h1 {
-    font-size: 16pt;
+    font-size: 22pt;
     font-weight: bold;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.5px;
     margin: 0 0 2px 0;
-}
-h1 + p {
-    font-size: 8.7pt;
-    color: #555;
-    margin: 0 0 6px 0;
+    color: #111;
 }
 
+/* Subtitle (role title line immediately after name) */
+h1 + p {
+    font-size: 10pt;
+    color: #444;
+    margin: 0 0 2px 0;
+    font-weight: normal;
+}
+
+/* Contact line (second paragraph after name) */
+h1 + p + p {
+    font-size: 8.5pt;
+    color: #555;
+    margin: 0 0 8px 0;
+    text-align: center;
+}
+
+/* Section headers - dark navy with prominent underline */
 h2 {
-    font-size: 9.2pt;
+    font-size: 9pt;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: #2c2c2c;
-    border-bottom: 0.75px solid #ccc;
-    margin: 9px 0 4px 0;
+    letter-spacing: 0.6px;
+    color: #1a3055;
+    border-bottom: 1.5px solid #1a3055;
+    margin: 10px 0 4px 0;
     padding-bottom: 2px;
 }
 
+/* h3 fallback for older cv.md files that use ### for role headers */
+h3 {
+    font-size: 9.7pt;
+    font-weight: bold;
+    margin: 5px 0 1px 0;
+    color: #111;
+}
+
 p {
-    margin: 2px 0 5px 0;
+    margin: 2px 0 4px 0;
 }
 
 ul {
-    margin: 2px 0 6px 0;
+    margin: 1px 0 5px 0;
     padding-left: 14px;
 }
 li {
@@ -68,7 +90,7 @@ li {
     font-size: 9.2pt;
 }
 
-strong { font-weight: 600; }
+strong { font-weight: 700; }
 hr { display: none; }
 """
 

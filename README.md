@@ -4,6 +4,57 @@ A local, human-in-the-loop job application assistant. Searches job boards, score
 
 ---
 
+## Changelog
+
+### v1.3.0 — Two-pass CV generation + PDF style overhaul (2026-06-20)
+
+#### CV PDF styling (`src/pdf_generator.py`)
+- Name heading increased from 16pt to 22pt (scales down to 18pt under shrink overrides).
+- Added separate subtitle line (`h1 + p`) at 10pt, centered, `#444` — renders the role/positioning title on its own line.
+- Contact line (`h1 + p + p`) styled at 8.5pt centered with `·` separators.
+- Section headers (`h2`) recolored to dark navy `#1a3055` with a 1.5px solid underline (was light `#ccc` hairline).
+- `strong` weight raised from 600 → 700 so `**Role · Company**` format pops visibly.
+- Added `h3` fallback (9.7pt bold) for any older `cv.md` files using `###` for role headers.
+
+#### Two-pass CV generation (`src/generator.py`, `src/prompts.py`, `GENERATOR_PROMPT.md`)
+- **Pass 1 — comprehensive draft:** sends the full story pool (all ~18 stories) with a 4–6 bullet-per-role instruction and no page limit, producing a 1.5–2 page dump of every relevant story.
+- **Pass 2 — compress and package:** takes the comprehensive draft and compresses it to one dense page, simultaneously generating all application materials (LinkedIn message, recruiter email, talking points).
+- Both passes share the same cached system prompt, so the docx story reference (~6,300 tokens) is written only once per batch.
+- Removed `_select_stories()` pre-filtering — story selection now happens inside the LLM reasoning rather than a simple tag-overlap heuristic.
+
+#### DB: `folder_name` column (`src/db.py`, `batch_search.py`)
+- Added `folder_name TEXT` column to `jobs` table — stored at insert time, eliminating the need for fuzzy company/title matching when syncing a DB row to its output folder.
+- Auto-migration: `ALTER TABLE jobs ADD COLUMN folder_name TEXT` runs on init so existing DBs upgrade seamlessly.
+- `batch_search.py` now passes `folder_name` through `_save_to_db()`.
+
+#### `write_cv.py` helper (new file)
+- `write_job_cv(folder, angle, score, cv_md, ...)` — writes `cv.md` with the standard header block and immediately renders `cv.pdf` via `src/pdf_generator.py`.
+- Used by batch regeneration scripts and by any manual CV writing workflow.
+
+---
+
+### v1.2.0 — Employer-completeness guard + docx story caching (2026-06-18)
+
+- Added employer-completeness guard: before finalising any CV, checks each JD requirement against the available story pool. If a requirement is not covered, leaves it out and prompts the user to answer rather than hedging in the document.
+- Cached docx story reference in the generator system prompt: the full `input/*.docx` narrative (~6,300 tokens) is appended to the cached system block instead of the per-job user prompt — billed once per batch rather than on every generation call.
+- `cv.pdf` extraction now correctly handles older `cv.md` files where content started on the same line as `# Daniel Ziv`.
+- Added manual job-list audit utility and CV PDF rendering utility.
+
+---
+
+### v1.1.0 — ATS prompt rewrite + output status folders (2026-06-15)
+
+- Rewrote CV generation prompt for ATS coverage and one-page strictness.
+- Changed output layout from per-run batch folders (`outputs/YYYY-MM-DD_batch/`) to three persistent status folders (`outputs/scraped/`, `outputs/interesting/`, `outputs/applied/`).
+- `jobs.folder_name` added as the canonical link between a DB row and its output folder.
+- Loosened job filtering to reduce false-negative scraping misses.
+- Added Machine Learning Israel (machinelearning.co.il) as a discoverable job board.
+- Added JobSpy-based LinkedIn job discovery as a second parallel search path.
+
+---
+
+---
+
 ## Quick Start
 
 ```bash

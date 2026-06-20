@@ -50,7 +50,7 @@ Single-file Streamlit app (`app.py`) with page routing via `st.session_state.pag
 | File | Role |
 |---|---|
 | `app.py` | All Streamlit pages and routing |
-| `src/db.py` | SQLite CRUD; `jobs` and `applications` tables |
+| `src/db.py` | SQLite CRUD; `jobs` and `applications` tables. `jobs.folder_name` stores the matching `outputs/<status>/<Folder>/` name written at insert time - use it (never company/title fuzzy matching) to sync a job row to its output folder |
 | `src/scorer.py` | Deterministic scorer (weights sum to 100); no LLM |
 | `src/analyzer.py` | LLM call to extract requirements JSON |
 | `src/generator.py` | LLM call to generate CV draft, LinkedIn, email, talking points |
@@ -120,8 +120,28 @@ Each `summary.md` ends with clarifying questions the LLM generated. When the use
    ```
 5. Confirm to the user what was updated
 
-**Never** modify the original reference doc in `input/` - it is read-only.  
-The editable profile is `profile/candidate_profile.yaml`.
+**Never** modify the original reference doc in `input/` - it is read-only, with one exception:
+when this workflow adds a new user-confirmed story, append it to **both**
+`profile/candidate_profile.yaml` and `input/Daniel_Ziv_Story_Reference.docx` (via `python-docx`'s
+`Document` API). Existing paragraphs in the docx are never edited or removed - only new stories
+are appended, so the docx stays the complete narrative reference instead of drifting out of sync
+with the yaml.
+
+## CV/Outreach Content: Never Hedge, Ask Instead
+
+Before finalizing any CV, LinkedIn message, or recruiter email (manual or pipeline-generated),
+check each JD requirement against the available story pool (`profile/candidate_profile.yaml` +
+`input/*.docx`). If a requirement is genuinely covered by a story, use it with full confidence -
+no hedging, no "adjacent to," no gap disclosure, no mismatch framing ("different specialty,"
+"long-shot," "breadth application"). These documents get sent to a human; they must never
+volunteer what's missing or undersell the candidate.
+
+If a requirement is not covered and there's real doubt the candidate might have unlisted
+relevant experience, do not write a hedge into the CV - leave it out and ask the user instead
+(batched into one consolidated list if multiple jobs are involved) before finalizing.
+
+**Interview Talking Points sections are exempt** - never sent, and the legitimate place for
+honest gap-awareness and interview prep notes.
 
 ## Scoring Config Auto-Sync
 

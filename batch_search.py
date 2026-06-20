@@ -291,7 +291,7 @@ def run_batch(
         job_dir = out_dir / dir_name  # already created in 4a
 
         # Persist to DB so the Streamlit app shows these too
-        job_id = _save_to_db(job)
+        job_id = _save_to_db(job, folder_name=dir_name)
 
         try:
             content = generate_application_content(
@@ -521,7 +521,7 @@ def _write_overall_summary(out_dir, keywords, boards, n_found, all_scored, top):
 
 # ─── DB helper ─────────────────────────────────────────────────────────────────
 
-def _save_to_db(job: dict) -> int:
+def _save_to_db(job: dict, folder_name: str = "") -> int:
     existing = db.get_job_by_url(job["url"])
     if existing:
         job_id = existing["id"]
@@ -534,6 +534,7 @@ def _save_to_db(job: dict) -> int:
             fit_score=job["score"],
             fit_explanation=job["explanation"],
             status="analyzed",
+            folder_name=folder_name,
         )
     else:
         job_id = db.insert_job({
@@ -544,6 +545,7 @@ def _save_to_db(job: dict) -> int:
             "source": job["board"].lower(),
             "raw_description": job["description"],
             "status": "analyzed",
+            "folder_name": folder_name,
         })
         db.update_job(
             job_id,

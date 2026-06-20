@@ -34,6 +34,7 @@ def init_db() -> None:
             fit_score REAL,
             fit_explanation TEXT,
             status TEXT DEFAULT 'found',
+            folder_name TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -57,13 +58,18 @@ def init_db() -> None:
             conn.execute("ALTER TABLE applications ADD COLUMN cover_letter_draft TEXT")
         except Exception:
             pass  # column already exists
+        # Migrate existing DBs: add folder_name if missing
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN folder_name TEXT")
+        except Exception:
+            pass  # column already exists
 
 
 def insert_job(data: dict) -> int:
     with _conn() as conn:
         cur = conn.execute(
-            """INSERT INTO jobs (company, title, location, url, source, raw_description, status)
-               VALUES (:company, :title, :location, :url, :source, :raw_description, :status)""",
+            """INSERT INTO jobs (company, title, location, url, source, raw_description, status, folder_name)
+               VALUES (:company, :title, :location, :url, :source, :raw_description, :status, :folder_name)""",
             {
                 "company": data.get("company", ""),
                 "title": data.get("title", ""),
@@ -72,6 +78,7 @@ def insert_job(data: dict) -> int:
                 "source": data.get("source", "manual"),
                 "raw_description": data.get("raw_description", ""),
                 "status": data.get("status", "found"),
+                "folder_name": data.get("folder_name", ""),
             },
         )
         return cur.lastrowid

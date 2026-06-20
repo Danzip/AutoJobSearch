@@ -1,34 +1,8 @@
-import json
 from typing import Optional
 
 from src.llm import LLMProvider
-from src.prompts import generator_prompt, get_generator_system
-from src.utils import extract_json_from_text, load_config, load_profile_notes
-
-
-def _select_stories(stories: list, requirements: dict, max_stories: int) -> list:
-    """Pick the most relevant stories by tag overlap with job domains and skills."""
-    domains = {d.lower().replace(" ", "_").replace("-", "_")
-               for d in requirements.get("domains", [])}
-    skills  = {s.lower() for s in requirements.get("required_skills", [])}
-
-    def relevance(story):
-        tags = {t.lower() for t in story.get("tags", [])}
-        # Direct domain/tag overlap
-        score = len(tags & domains) * 2
-        # Skill keyword overlap (partial match)
-        score += sum(1 for tag in tags
-                     for skill in skills
-                     if skill in tag or tag in skill)
-        # Boost production/edge stories for high production/edge relevance
-        if requirements.get("production_relevance", 0) >= 6 and "production" in tags:
-            score += 2
-        if requirements.get("edge_ai_relevance", 0) >= 6 and "edge_ai" in tags:
-            score += 2
-        return score
-
-    ranked = sorted(stories, key=relevance, reverse=True)
-    return ranked[:max_stories]
+from src.prompts import comprehensive_cv_prompt, compress_and_package_prompt, get_generator_system
+from src.utils import extract_json_from_text, load_profile_notes
 
 
 def generate_application_content(
@@ -39,25 +13,34 @@ def generate_application_content(
     llm: LLMProvider,
     reviewer_llm: Optional[LLMProvider] = None,
 ) -> dict:
-    cfg = load_config()
-    max_stories = cfg.get("llm", {}).get("max_stories_in_prompt", 6)
-
-    # Select only the most relevant stories instead of sending all ~18
-    all_stories = profile.get("stories", [])
-    selected_stories = _select_stories(all_stories, requirements, max_stories)
-
-    # Build a trimmed copy of the profile for the prompt
-    trimmed_profile = {**profile, "stories": selected_stories}
-
     notes = load_profile_notes()
+    full_profile = {**profile}
     if notes:
-        trimmed_profile["_extra_notes"] = notes
+        full_profile["_extra_notes"] = notes
 
-    prompt = generator_prompt(job, requirements, trimmed_profile, cv_angle)
-    raw = llm.complete(prompt, system=get_generator_system(), call_type="generate")
-    data = extract_json_from_text(raw)
+    system = get_generator_system()
 
-    cv_draft = data.get("cv_draft_markdown", "")
+    # Pass 1: comprehensive draft - all stories, no bullet limit
+    raw1 = llm.complete(
+        comprehensive_cv_prompt(job, requirements, full_profile, cv_angle),
+        system=system,
+        call_type="generate",
+    )
+    data1 = extract_json_from_text(raw1)
+    comprehensive_draft = data1.get("cv_draft_comprehensive", "")
+
+    if not comprehensive_draft:
+        print("  WARN  Pass 1 returned empty draft; generation may be degraded")
+
+    # Pass 2: compress to 1 dense page + generate full package
+    raw2 = llm.complete(
+        compress_and_package_prompt(job, requirements, comprehensive_draft, cv_angle),
+        system=system,
+        call_type="generate",
+    )
+    data2 = extract_json_from_text(raw2)
+
+    cv_draft = data2.get("cv_draft_markdown", "")
 
     if reviewer_llm and cv_draft:
         from src.reviewer import review_cv
@@ -65,10 +48,10 @@ def generate_application_content(
 
     content = {
         "cv_draft_markdown": cv_draft,
-        "cover_letter":      data.get("cover_letter", ""),
-        "linkedin_message":  data.get("linkedin_message", ""),
-        "recruiter_email":   data.get("recruiter_email", ""),
-        "talking_points":    data.get("talking_points", []),
+        "cover_letter":      data2.get("cover_letter", ""),
+        "linkedin_message":  data2.get("linkedin_message", ""),
+        "recruiter_email":   data2.get("recruiter_email", ""),
+        "talking_points":    data2.get("talking_points", []),
     }
     _fix_em_dashes(content)
     _warn_missing_employers(content)

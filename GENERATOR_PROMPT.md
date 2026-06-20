@@ -156,32 +156,48 @@ Transfer learning, Experiment tracking, W&B, Production deployment.
 
 ## CV Format
 
-Match this structure (reference: `c:\Users\Daniel Ziv\Downloads\Daniel_Ziv_CV.pdf`):
+Use **exactly** this markdown structure. The PDF renderer maps each element to a specific visual style that matches the candidate's reference CV (`Daniel_Ziv_CV.pdf`):
 
-```
-[Name - large]
-[Title | Specialization]
-[email | phone | location | linkedin]
+```markdown
+# Daniel Ziv
+[Role title tailored to this job - plain text, no markdown prefix]
+dziv94@gmail.com · +972 54 461 4839 · Tel Aviv · linkedin.com/in/dziv
 
-SUMMARY
-[2-4 sentence paragraph tailored to the specific role. Mention the role's domain explicitly. 
-Lead with the most relevant experience. No filler sentences.]
+## SUMMARY
+[2-3 sentences tailored to this role. Lead with most relevant experience. No filler.]
 
-EXPERIENCE
-[Company] | [Role italic]   [dates | location]
+## EXPERIENCE
+
+**[Job Title]** · [Company Name], [City]
+[Start Year] – [End Year or Present]
 - Bullet 1 (most relevant to this role)
 - Bullet 2
-...
+- Bullet 3
 
-EDUCATION
-[Degree] | [University]   [dates | GPA]
-- Course focus line
-- Final project (include for biomedical/research roles, drop for pure engineering roles)
+**[Job Title]** · [Company Name], [City]
+[Start Year] – [End Year]
+- Bullet 1
+- Bullet 2
 
-TECHNICAL SKILLS
-[Category bold]: skill, skill, skill
-[Category bold]: ...
+## EDUCATION
+**B.Sc. Electrical Engineering** · Tel Aviv University · GPA 85 · 2013–2017 | Focus: Computer Vision, Image Processing, Algorithms & Data Structures | Final Project: Pericyte Segmentation: 100/100
+
+## TECHNICAL SKILLS
+**Research & Algorithms:** [relevant items]
+**ML & CV:** [relevant items]
+**Frameworks & Tools:** [relevant items]
+**Programming:** Python, C++, MATLAB
 ```
+
+**Critical format rules (the PDF styling depends on these):**
+- `# h1` line: ONLY "Daniel Ziv" — no role name, no dash, just the name
+- Line 2: subtitle role title — plain text, no `##` or `**` prefix
+- Line 3: contact info with `·` (middle dot) NOT `|` (pipe) as separator
+- Section headers (`##`): ALL CAPS exactly as shown above
+- Role lines: `**Bold Title**` · Company, Location (bold title, then `·`, then company and city)
+- Date line: immediately after role line, plain text, format `YYYY – YYYY` or `YYYY – Present`
+- Skills section: `**Bold Category:**` comma-separated items — NO bullet points in skills
+- NEVER use `###` (h3 headers) anywhere in the CV
 
 **ONE PAGE STRICT.** Max 3 bullets per role (4 for the most recent if essential). A short punchy CV beats a long one every time. Cut ruthlessly.
 
