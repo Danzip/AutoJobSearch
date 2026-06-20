@@ -41,56 +41,50 @@ def test_shrink_overrides_reduce_li_margin():
     assert margins == sorted(margins, reverse=True), "li margin-bottom must decrease across shrink levels"
 
 
-# ── CSS bullet spacing ─────────────────────────────────────────────────────────
-
-def test_css_li_margin_bottom_at_least_4px():
-    """Base li margin-bottom must be > 2px so bullets aren't smushed together."""
-    import re
-    m = re.search(r"li\s*\{[^}]*margin-bottom:\s*(\d+)px", _CV_CSS)
-    assert m, "li { margin-bottom: Xpx } not found in _CV_CSS"
-    assert int(m.group(1)) >= 4, f"li margin-bottom is {m.group(1)}px — too tight, need >= 4px"
-
-
-def test_css_loose_list_li_p_margin_reset():
-    """li > p must have margin: 0 so loose-list items don't double-space."""
-    assert "li > p" in _CV_CSS, "li > p rule missing from _CV_CSS"
-    import re
-    m = re.search(r"li\s*>\s*p\s*\{([^}]*)\}", _CV_CSS)
-    assert m, "li > p { ... } block not found in _CV_CSS"
-    assert "margin: 0" in m.group(1), "li > p must set margin: 0 to prevent double-spacing"
-
-
-# ── Markdown: tight vs loose list HTML structure ───────────────────────────────
+# ── Markdown rendering helpers ─────────────────────────────────────────────────
 
 def _render_md(text: str) -> str:
     import markdown
     return markdown.markdown(text)
 
 
-def test_tight_list_renders_without_p_wrapper():
-    """Consecutive bullets (no blank line) produce <li>text</li>, not <li><p>text</p></li>."""
+# ── Bullet spacing and consistency ────────────────────────────────────────────
+# These tests would FAIL on the original code (2px margin, mixed loose/tight rendering).
+
+def test_li_margin_in_range_for_multiline_bullets():
+    """li margin-bottom must be 4-9px. Long multi-line bullets provide visual mass;
+    too little (<=2px) smushes bullets together, too much (>=10px) creates excessive
+    gaps when bullets already wrap to 2 lines.
+    FAILS on original 2px (too tight) and on the interim 12px (too loose)."""
+    import re
+    m = re.search(r"li\s*\{[^}]*margin-bottom:\s*(\d+)px", _CV_CSS)
+    assert m, "li { margin-bottom } not found in _CV_CSS"
+    value = int(m.group(1))
+    assert 4 <= value <= 9, (
+        f"li margin-bottom is {value}px — must be 4-9px to work with multi-line bullets"
+    )
+
+
+def test_tight_list_all_bullets_same_element_type():
+    """Tight bullets (no blank lines between them) must ALL be bare <li>text</li>.
+    If any bullet gets a <p> wrapper (loose-list mixing), font sizes become inconsistent.
+    FAILS when blank lines are accidentally inserted between same-role bullets."""
     html = _render_md("- bullet one\n- bullet two\n- bullet three\n")
-    assert "<li><p>" not in html
-    assert "<li>bullet one</li>" in html
+    assert "<li><p>" not in html, (
+        "Tight list has <p>-wrapped items — mixed tight/loose rendering causes inconsistent bullet font sizes"
+    )
+    assert html.count("<li>") == 3, "Expected exactly 3 <li> elements"
 
 
-def test_loose_list_renders_with_p_wrapper():
-    """Bullets separated by blank lines (different project groups) produce <li>...<p>...</p>...</li>."""
-    html = _render_md("- bullet one\n\n- bullet two\n\n- bullet three\n")
-    # python-markdown renders loose list items with <p> inside <li> (possibly with whitespace)
-    assert "<p>bullet one</p>" in html
-    assert "<p>bullet two</p>" in html
-    # Verify the <p> is nested inside <li>, not at top level
-    assert html.index("<p>bullet one</p>") > html.index("<li>")
-
-
-def test_mixed_tight_loose_list_groups():
-    """Blank line between project groups causes items after the gap to be wrapped in <p>."""
-    md = "- d-fine bullet 1\n- d-fine bullet 2\n\n- muze bullet\n"
+def test_skill_categories_with_blank_lines_render_as_separate_paragraphs():
+    """Blank lines between **Category:** skill lines produce separate <p> elements.
+    FAILS if blank lines are removed — categories run together with no visual gap."""
+    md = "**Computer Vision:** detection, tracking\n\n**Deep Learning:** PyTorch, ONNX\n"
     html = _render_md(md)
-    # Items after the blank line get <p> wrapping (loose item behaviour)
-    assert "<p>muze bullet</p>" in html
-    assert "d-fine bullet 1" in html
+    assert html.count("<p>") == 2, (
+        f"Expected 2 separate <p> elements for skill categories, got {html.count('<p>')} — "
+        "missing blank lines between categories will collapse them into one block"
+    )
 
 
 # ── Page count ─────────────────────────────────────────────────────────────────

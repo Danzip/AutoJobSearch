@@ -12,9 +12,9 @@ from pathlib import Path
 # Level 0 = no change; level 1+ progressively reduce margins and font sizes.
 _CSS_SHRINK_OVERRIDES = [
     "",
-    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } li { font-size: 8.8pt; margin-bottom: 3px; } h1 { font-size: 20pt; }",
-    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } li { font-size: 8.4pt; margin-bottom: 2px; } h1 { font-size: 19pt; }",
-    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } li { font-size: 8.0pt; margin-bottom: 1px; } h1 { font-size: 18pt; }",
+    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } p { margin: 1px 0 2px 0; } li { font-size: 8.8pt; margin-bottom: 4px; } h1 { font-size: 20pt; }",
+    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } p { margin: 0 0 2px 0; } li { font-size: 8.4pt; margin-bottom: 3px; } h1 { font-size: 19pt; }",
+    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } p { margin: 0 0 1px 0; } li { font-size: 8.0pt; margin-bottom: 2px; } h1 { font-size: 18pt; }",
 ]
 
 
@@ -27,7 +27,7 @@ _CV_CSS = """
 body {
     font-family: "Helvetica Neue", Arial, sans-serif;
     font-size: 9.7pt;
-    line-height: 1.4;
+    line-height: 1.45;
     color: #1a1a1a;
     margin: 0;
 }
@@ -78,21 +78,16 @@ h3 {
 }
 
 p {
-    margin: 2px 0 4px 0;
+    margin: 1px 0 3px 0;
 }
 
 ul {
     margin: 1px 0 5px 0;
-    padding-left: 14px;
+    padding-left: 16px;
 }
 li {
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     font-size: 9.2pt;
-}
-/* Loose-list items (blank line between bullets in source markdown) wrap content in <p>.
-   Reset p margin here so the li margin-bottom is the only spacer — no double-gap. */
-li > p {
-    margin: 0;
 }
 
 strong { font-weight: 700; }
