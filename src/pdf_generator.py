@@ -12,9 +12,9 @@ from pathlib import Path
 # Level 0 = no change; level 1+ progressively reduce margins and font sizes.
 _CSS_SHRINK_OVERRIDES = [
     "",
-    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } li { font-size: 8.8pt; } h1 { font-size: 20pt; }",
-    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } li { font-size: 8.4pt; } h1 { font-size: 19pt; }",
-    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } li { font-size: 8.0pt; } h1 { font-size: 18pt; }",
+    "@page { margin: 1.2cm 1.4cm 1.0cm 1.4cm; } body { font-size: 9.1pt; } li { font-size: 8.8pt; margin-bottom: 3px; } h1 { font-size: 20pt; }",
+    "@page { margin: 1.0cm 1.2cm 0.8cm 1.2cm; } body { font-size: 8.7pt; } li { font-size: 8.4pt; margin-bottom: 2px; } h1 { font-size: 19pt; }",
+    "@page { margin: 0.8cm 1.0cm 0.6cm 1.0cm; } body { font-size: 8.3pt; } li { font-size: 8.0pt; margin-bottom: 1px; } h1 { font-size: 18pt; }",
 ]
 
 
@@ -86,8 +86,13 @@ ul {
     padding-left: 14px;
 }
 li {
-    margin-bottom: 2px;
+    margin-bottom: 5px;
     font-size: 9.2pt;
+}
+/* Loose-list items (blank line between bullets in source markdown) wrap content in <p>.
+   Reset p margin here so the li margin-bottom is the only spacer — no double-gap. */
+li > p {
+    margin: 0;
 }
 
 strong { font-weight: 700; }

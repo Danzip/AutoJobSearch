@@ -112,6 +112,7 @@ CRITICAL FORMAT RULES:
 - Date line: immediately after role line, plain text, format: YYYY – YYYY or YYYY – Present
 - Skills section: **Bold Category:** comma-separated items (NO bullet points in skills)
 - NEVER use ### (h3 headers) anywhere in the CV
+- BULLET SEPARATION: When bullets within a role cover DIFFERENT projects or topics, add a blank line between those groups. Bullets covering the same project stay together (no blank line). This creates visible separation between distinct work streams.
 
 WRITING RULES - ABSOLUTE:
 - NO em dashes (—) anywhere - use commas, colons, or hyphens
@@ -322,6 +323,7 @@ TASK: Write a comprehensive CV that covers every relevant story. Do NOT limit yo
 1. Go through every required skill in the JD one by one. For each, find a matching story and plan to include it.
 2. Write 4-6 bullets per role. Include every story that has any relevance to this JD.
 3. Use the correct markdown structure (# name, plain subtitle, contact with ·, ## CAPS section headers, **Role** · Company date-on-next-line format, **Category:** skills).
+4. BULLET SEPARATION: Add a blank line between bullets that cover different projects or topics within the same role. Bullets for the same project stay together (no blank line). This will render as visible whitespace in the PDF.
 
 Do not pre-censor - include all relevant content. The compression pass will select the strongest bullets.
 
@@ -351,6 +353,7 @@ From the draft above, select the strongest 3 bullets per role (4 for the most re
 - Keep ALL sections: SUMMARY, every EXPERIENCE role, EDUCATION, TECHNICAL SKILLS
 - Preserve the exact markdown structure: # name / plain subtitle / contact with · / ## CAPS headers / **Role** · Company / plain date line / **Category:** skills
 - No em dashes, no bracket placeholders
+- BULLET SEPARATION: Add a blank line between bullets that cover different projects or topics within the same role. Bullets for the same project stay together. This creates readable whitespace between distinct work streams.
 
 TASK 2 - APPLICATION MATERIALS:
 Generate the rest of the package based on the compressed CV.
